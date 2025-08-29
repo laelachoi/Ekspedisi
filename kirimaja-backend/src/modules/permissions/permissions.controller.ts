@@ -16,9 +16,4 @@ export class PermissionsController {
       data: await this.permissionsService.findAll(),
     }
   }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.permissionsService.findOne(+id);
-  }
 }
