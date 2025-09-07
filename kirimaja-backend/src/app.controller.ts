@@ -3,11 +3,17 @@ import { AppService } from './app.service';
 import { JwtAuthGuard } from './modules/auth/guards/logged-in.guard';
 import { PermissionGuard } from './modules/auth/guards/permission.guard';
 import { RequireAnyPermissions } from './modules/auth/decorators/permissions.decorator';
+import { EmailService } from './common/email/email.service';
+import { QueueService } from './common/queue/queue.service';
 
 @Controller()
-@UseGuards(JwtAuthGuard, PermissionGuard)
+// @UseGuards(JwtAuthGuard, PermissionGuard)
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    private readonly emailService: EmailService,
+    private readonly queueService: QueueService,
+  ) {}
 
   @Get()
   getHello(): string {
@@ -15,8 +21,18 @@ export class AppController {
   }
 
   @Get('protected')
-  @RequireAnyPermissions('shipments.create', 'shipments.view')
+  // @RequireAnyPermissions('shipments.create', 'shipments.view')
   getProtectedResource(): string {
     return 'This is a protected resource';
+  }
+
+  @Get('send-email-test')
+  async sendEmailTest(): Promise<string> {
+    await this.queueService.addEmailJob({
+      to: 'testing@gmail.com',
+      type: 'testing',
+    });
+
+    return 'Test email sent successfully';
   }
 }
