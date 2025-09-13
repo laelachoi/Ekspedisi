@@ -149,7 +149,7 @@ model ShipmentDetail {
   destinationAddress    String @map("destination_address")
   destinationLatitude   Float? @map("destination_latitude")
   destinationLongitude  Float? @map("destination_longitude")
-  package_type          String @map("package_type")
+  packageType          String @map("package_type")
   pickupProof           String? @map("pickup_proof")
   receiptProof          String? @map("receipt_proof")
   recipientName         String @map("recipient_name")

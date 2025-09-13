@@ -1,8 +1,6 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import * as path from 'path';
-import { title } from "process";
-import { from } from "rxjs";
 
 @Injectable()
 export class EmailService {
@@ -26,7 +24,7 @@ export class EmailService {
     private loadTemplate(templateName: string): string {
         const templatePath = path.join(
             this.templatesPath,
-            `${templateName}.hbs`
+            `${templateName}.hbs`,
         );
         return require('fs').readFileSync(templatePath, 'utf8');
     }
@@ -50,6 +48,60 @@ export class EmailService {
             to,
             subject: 'Test Email',
             html: htmlContent,
+        };
+
+        await this.transporter.sendMail(mailOptions);
+    }
+
+    async sendEmailPaymentNotification(
+        to: string,
+        paymentUrl: string,
+        shipmentId: number,
+        amount: number,
+        expiryDate: Date,
+    ): Promise<void> {
+        const templateData = {
+            shipmentId,
+            paymentUrl,
+            amount: amount.toLocaleString('id-ID'),
+            expiryDate: expiryDate.toDateString(), // Format date to a readable string
+        };
+
+        const htmlContent = this.compileTemplate(
+            'payment-notification',
+            templateData,
+        );
+
+        const mailOptions = {
+            from: process.env.SMTP_EMAIL_SENDER || '',
+            to,
+            subject: `Payment Notification for Shipment #${shipmentId}`,
+            html: htmlContent,
+        };
+
+        await this.transporter.sendMail(mailOptions);
+    }
+
+    async sendPaymentSuccess(
+        to: string,
+        shipmentId: number,
+        amount: number,
+        trackingNumber?: string,
+    ): Promise<void> {
+        const templateData = {
+            shipmentId,
+            amount: amount.toLocaleString('id-ID'),
+            paymentDate: new Date().toLocaleDateString('id-ID'),
+            trackingNumber,
+        };
+
+        const html = this.compileTemplate('payment-success', templateData);
+
+        const mailOptions = {
+            from: process.env.SMTP_EMAIL_SENDER || '',
+            to,
+            subject: `Payment Successfull - Shipment #${shipmentId}`,
+            html,
         };
 
         await this.transporter.sendMail(mailOptions);

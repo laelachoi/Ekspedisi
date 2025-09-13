@@ -1,11 +1,16 @@
-import { Process, Processor } from "@nestjs/bull";
-import { Logger } from "@nestjs/common";
-import { Job } from "bull";
-import { EmailService } from "src/common/email/email.service";
+import { Process, Processor } from '@nestjs/bull';
+import { Logger } from '@nestjs/common';
+import { Job } from 'bull';
+import { EmailService } from 'src/common/email/email.service';
 
 export interface EmailJobData {
     type: string;
     to: string;
+    shipmentId?: number;
+    amount?: number;
+    paymentUrl?: string;
+    expiryDate?: Date;
+    trackingNumber?: string;
 }
 
 @Processor('email-queue')
@@ -16,12 +21,12 @@ export class EmailQueueProcessor {
         // Inject any services needed for email processing, e.g., 'EmailService'
         private readonly emailService: EmailService,
     ) {}
-    
+
     @Process('send-email')
     async handleSendEmail(job: Job<EmailJobData>) {
         const { data } = job;
         this.logger.log(`Processing email job: ${data.type} to ${data.to}`);
-        // Implement email sending logic here 
+        // Implement email sending logic here
 
         try {
             switch (data.type) {
@@ -29,12 +34,39 @@ export class EmailQueueProcessor {
                     await this.emailService.testingEmail(data.to);
                     this.logger.log(`Test email sent to ${data.to}`);
                     break;
-                default: 
+                case 'payment-notification':
+                    const expiryDate =
+                        typeof data.expiryDate === 'string'
+                            ? new Date(data.expiryDate)
+                            : data.expiryDate;
+                    await this.emailService.sendEmailPaymentNotification(
+                        data.to,
+                        data.paymentUrl || '',
+                        data.shipmentId || 0,
+                        data.amount || 0,
+                        expiryDate || new Date(),
+                    );
+                    this.logger.log(`Payment notification sent to ${data.to}`);
+                    break;
+                case 'payment-success':
+                    await this.emailService.sendPaymentSuccess(
+                        data.to,
+                        data.shipmentId || 0,
+                        data.amount || 0,
+                        data.trackingNumber,
+                    );
+                    this.logger.log(`Payment success email sent to ${data.to}`);
+                    break;
+                default:
                     this.logger.warn(`Unknown email type: ${data.type}`);
                     break;
             }
+            this.logger.log(`Email job completed: ${data.type} to ${data.to}`);
         } catch (error) {
-            this.logger.error(`Failed to process email job: ${data.type} to ${data.to}`, error);
+            this.logger.error(
+                `Failed to process email job: ${data.type} to ${data.to}`,
+                error.stack,
+            );
             throw error;
         }
     }

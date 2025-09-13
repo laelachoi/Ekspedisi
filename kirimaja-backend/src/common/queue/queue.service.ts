@@ -1,11 +1,15 @@
-import { InjectQueue } from "@nestjs/bull";
-import { Injectable } from "@nestjs/common";
-import { Queue } from "bull";
-import { EmailJobData } from "./processors/email-queue.processor";
+import { InjectQueue } from '@nestjs/bull';
+import { Injectable } from '@nestjs/common';
+import { Queue } from 'bull';
+import { EmailJobData } from './processors/email-queue.processor';
+import { PaymentExpiryJobData } from './processors/payment-expired-queue.processor';
 
 @Injectable()
 export class QueueService {
-    constructor(@InjectQueue('email-queue') private emailQueue: Queue) {}
+    constructor(
+        @InjectQueue('email-queue') private emailQueue: Queue,
+        @InjectQueue('payment-expired-queue') private paymentQueue: Queue,
+    ) {}
 
     async addEmailJob(
         data: EmailJobData,
@@ -21,5 +25,45 @@ export class QueueService {
                 delay: options?.delay || 1000,
             },
         });
+    }
+
+    async addPaymentExpiryJob(data: PaymentExpiryJobData, expiryDate: Date) {
+        const delay = expiryDate.getTime() - Date.now();
+
+        if (delay <= 0) {
+            // If already expired, process immediately
+            return this.paymentQueue.add('expire-payment', data, {
+                attempts: 3,
+                backoff: {
+                    type: 'exponential',
+                    delay: 2000,
+                },
+                removeOnComplete: 10,
+                removeOnFail: 5,
+            });
+        }
+
+        return this.paymentQueue.add('expire-payment', data, {
+            delay,
+            attempts: 3,
+            backoff: {
+                type: 'exponential',
+                delay: 2000,
+            },
+            removeOnComplete: 10,
+            removeOnFail: 5,
+        });
+    }
+
+    // hapus queue yang sudah di punya
+    async cancelPaymentExpiryJob(paymentId: number) {
+        const jobs = await this.paymentQueue.getJobs(['delayed', 'waiting']);
+
+        for (const job of jobs) {
+            if (job.data.paymentId === paymentId) {
+                await job.remove();
+                break;
+            }
+        }
     }
 }
