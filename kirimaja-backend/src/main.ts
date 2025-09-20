@@ -13,6 +13,14 @@ async function bootstrap() {
 
     app.useStaticAssets('public');
 
+    // agar bisa akses semua endpoint, tdk di batasi
+    app.enableCors({
+        origin: process.env.CORS_ORIGIN || '*',
+        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+        allowedHeaders: 'Content-Type, Authorization',
+        credentials: true,
+    });
+
     const port = process.env.PORT || 3000;
     await app.listen(port);
 

@@ -10,12 +10,13 @@ import { QueueService } from 'src/common/queue/queue.service';
 import { OpenCageService } from 'src/common/opencage/opencage.service';
 import { XenditService } from 'src/common/xendit/xendit.service';
 import { Shipment } from '@prisma/client';
-import { get } from 'http';
 import { getDistance } from 'geolib';
 import { PaymentStatus } from 'src/common/enum/payment-status.enum';
 import { XenditWebhookDto } from './dto/xendit-webhook.dto';
 import { QrCodeService } from 'src/common/qrcode/qrcode.service';
 import { ShipmentStatus } from 'src/common/enum/shipment-status.enum';
+import { PdfService, ShipmentPdfData } from 'src/common/pdf/pdf.service';
+import { string } from 'zod';
 
 @Injectable()
 export class ShipmentsService {
@@ -25,6 +26,7 @@ export class ShipmentsService {
         private openCageService: OpenCageService,
         private xenditService: XenditService,
         private qrcodeService: QrCodeService,
+        private pdfService: PdfService,
     ) {}
 
     async create(createShipmentDto: CreateShipmentDto): Promise<Shipment> {
@@ -84,7 +86,7 @@ export class ShipmentsService {
                         recipientName: createShipmentDto.recipient_name,
                         recipientPhone: createShipmentDto.recipient_phone,
                         weight: createShipmentDto.weight,
-                        package_type: createShipmentDto.package_type,
+                        packageType: createShipmentDto.package_type,
                         deliveryType: createShipmentDto.delivery_type,
                         destinationLatitude: lat,
                         destinationLongitude: lng,
@@ -279,12 +281,41 @@ export class ShipmentsService {
         });
     }
 
-    findAll() {
-        return `This action returns all shipments`;
+    async findAll(userId: number): Promise<Shipment[]> {
+        return this.prismaService.shipment.findMany({
+          where: {
+            shipmentDetail: {
+              userId: userId,
+            },
+          },
+          include: {
+            shipmentDetail: true,
+            payment: true,
+            shipmentHistory: true,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
     }
 
-    findOne(id: number) {
-        return `This action returns a #${id} shipment`;
+    async findOne(id: number): Promise<Shipment> {
+        const shipment = await this.prismaService.shipment.findUnique({
+          where: {
+            id: id,
+          },
+          include: {
+            shipmentDetail: true,
+            payment: true,
+            shipmentHistory: true,
+          },
+        });
+
+        if (!shipment) {
+          throw new NotFoundException(`Shipment with ID ${id} not found`);
+        }
+
+        return shipment;
     }
 
     private calculateShipmentCost(
@@ -359,5 +390,133 @@ export class ShipmentsService {
             weightPrice,
             distancePrice,
         };
+      }
+
+    async generateShipmentPdf(shipmentId: number): Promise<Buffer> {
+      const shipment = await this.prismaService.shipment.findUnique({
+        where: { id: shipmentId },
+        include: {
+          shipmentDetail: {
+            include: {
+              user: true, // Include user information
+              address: true, // Include pickup address
+            },
+          },
+          payment: true,
+          shipmentHistory: {
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 1,
+          }
+        },
+      });
+
+      if (!shipment) {
+        throw new NotFoundException(
+          `Shipment with ID ${shipmentId} not found`,
+        );
+      }
+
+      const shipmentDetail = shipment.shipmentDetail;
+      if (!shipmentDetail) {
+        throw new NotFoundException(
+          `Shipment detail for shipment ID ${shipmentId} not found`,
+        );
+      }
+
+      let qrCodePath: string | undefined = undefined;
+      if (shipment.qrCodeImage) {
+          qrCodePath = shipment.qrCodeImage;
+      } else if (shipment.trackingNumber) {
+          qrCodePath = await this.qrcodeService.generateQrCode(
+              shipment.trackingNumber,
+          );
+      }
+
+      let displayStatus: string;
+
+      if (shipment.paymentStatus === PaymentStatus.PENDING) {
+          displayStatus = 'Shipment created, awaiting payment confirmation.';
+      } else if (shipment.deliveryStatus === ShipmentStatus.DELIVERED) {
+          displayStatus = 'Shipment successfully delivered to the recipient.';
+      } else if (shipment.deliveryStatus === ShipmentStatus.ON_THE_WAY_TO_ADDRESS) {
+          displayStatus = 'Shipment is out for delivery to the recipient address.';
+      } else if (shipment.deliveryStatus === ShipmentStatus.READY_TO_DELIVER) {
+          displayStatus = 'Shipment is ready for the final delivery process.';
+      } else if (shipment.deliveryStatus === ShipmentStatus.DEPARTED_FROM_BRANCH) {
+          displayStatus = 'Shipment has departed from the local branch.';
+      } else if (shipment.deliveryStatus === ShipmentStatus.AT_BRANCH) {
+          displayStatus = 'Shipment is currently being processed at the local branch.';
+      } else if (shipment.deliveryStatus === ShipmentStatus.ARRIVED_AT_BRANCH) {
+          displayStatus = 'Shipment has arrived at the destination branch.';
+      } else if (shipment.deliveryStatus === ShipmentStatus.IN_TRANSIT) {
+          displayStatus = 'Shipment is in transit to the next branch.';
+      } else if (shipment.deliveryStatus === ShipmentStatus.PICKED_UP) {
+          displayStatus = 'Shipment has been picked up by the courier.';
+      } else if (shipment.deliveryStatus === ShipmentStatus.WAITING_PICKUP) {
+          displayStatus = 'Courier assigned, waiting for shipment pickup.';
+      } else if (shipment.deliveryStatus === ShipmentStatus.READY_TO_PICKUP) {
+          displayStatus = 'Payment confirmed, shipment ready for courier pickup.';
+      } else {
+          displayStatus = 'Status update is not yet available';
+      }
+
+      const pdfData: ShipmentPdfData = {
+        trackingNumber: shipment.trackingNumber || 'N/A',
+        shipmentId: shipment.id,
+        createdAt: shipment.createdAt,
+        deliveryType: shipmentDetail.deliveryType,
+        packageType: shipmentDetail.packageType,
+        weight: shipmentDetail.weight || 0,
+        price: shipment.price || 0,
+        distance: shipment.distance || 0,
+        paymentStatus: shipment.paymentStatus || 'N/A',
+        deliveryStatus: shipment.deliveryStatus || 'N/A',
+        currentStatus: displayStatus,
+        basePrice: shipmentDetail.basePrice || 0,
+        weightPrice: shipmentDetail.weightPrice || 0,
+        distancePrice: shipmentDetail.distancePrice || 0,
+        senderName: shipmentDetail.user.name || 'N/A',
+        senderEmail: shipmentDetail.user.email || 'N/A',
+        senderPhone: shipmentDetail.user.phoneNumber || 'N/A',
+        pickupAddress: `${shipmentDetail.address?.address}` || 'N/A',
+        recipientName: shipmentDetail.recipientName || 'N/A',
+        recipientPhone: shipmentDetail.recipientPhone || 'N/A',
+        destinationAddress: `${shipmentDetail.destinationAddress}` || 'N/A',
+        qrCodePath: qrCodePath,
+      };
+
+      return this.pdfService.generateShipmentPdf(pdfData);
+    }
+
+    async findShipmentByTrackingNumber(
+      trackingNumber: string,
+    ): Promise<Shipment> {
+      const shipment = await this.prismaService.shipment.findFirst({
+        where: { trackingNumber },
+        include: {
+          shipmentDetail: {
+            include: {
+              user: true, // Include user information
+              address: true, // Include pickup address
+            },
+          },
+          payment: true,
+          shipmentHistory: {
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
+        },
+      });
+
+      if (!shipment) {
+        throw new NotFoundException(
+          `Shipment with tracking number ${trackingNumber} not found`,
+        );        
+      }
+
+      return shipment;
     }
 }

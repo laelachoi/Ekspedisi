@@ -10,8 +10,8 @@
 			<!-- Tracking Section -->
 			<div class="tracking-section">
 				<div class="tracking-info">
-					<h2>Trx12344</h2>
-					<p>Shipment ID: #123 | Created: 01 January 2024</p>
+					<h2>Trx{{shipmentId}}</h2>
+					<p>Shipment ID: {{shipmentId}} | Created: {{generatedDate}}</p>
 				</div>
 				<div class="qr-code-section">
 					<img
@@ -111,6 +111,15 @@
 						</div>
 					</div>
 				</div>
+
+                <!-- Current Status Section -->
+                <div class="shipment-status">
+                    <h3>📦 CURRENT STATUS</h3>
+                    <div class="status-content">
+                        <p><strong>{{currentStatus}}</strong></p>
+                    </div>
+                </div>
+
 			</div>
 
 			<!-- Footer -->

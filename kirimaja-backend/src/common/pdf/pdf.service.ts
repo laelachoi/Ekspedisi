@@ -1,9 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import Handlebars from "handlebars";
-import path from "path";
 import puppeteer from "puppeteer";
 import * as fs from 'fs';
-import { generate } from "rxjs";
+import * as path from "path";
 
 export interface ShipmentPdfData {
     // Shipment info
@@ -17,6 +16,7 @@ export interface ShipmentPdfData {
     distance: number;
     paymentStatus: string;
     deliveryStatus: string;
+    currentStatus?: string;
 
     // Price breakdown
     basePrice?: number;
@@ -77,7 +77,7 @@ export class PdfService {
         const css = await this.loadCssFile('shipping-pdf.css');
 
         const qrCodeBase64 = data.qrCodePath
-            ? this.getBase64Image(data.qrCodePath)
+            ? this.getBase64Image(`public/${data.qrCodePath}`)
             : '';
 
         const templateData = {
@@ -91,6 +91,7 @@ export class PdfService {
             distance: data.distance.toFixed(2),
             paymentStatus: data.paymentStatus,
             deliveryStatus: data.deliveryStatus,
+            currentStatus: data.currentStatus || 'N/A',
             basePrice: data.basePrice?.toLocaleString('id-ID') || '0',
             weightPrice: data.weightPrice?.toLocaleString('id-ID') || '0',
             distancePrice: data.distancePrice?.toLocaleString('id-ID') || '0',
@@ -102,7 +103,11 @@ export class PdfService {
             recipientPhone: data.recipientPhone,
             destinationAddress: data.destinationAddress,
             qrCodeBase64: qrCodeBase64,
-            generatedDate: new Date().toLocaleDateString('id-ID'),
+            generatedDate: new Date().toLocaleDateString('id-ID', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+            }),
             styles: css,
         };
 
