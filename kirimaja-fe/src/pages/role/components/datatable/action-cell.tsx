@@ -22,13 +22,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useState, useEffect } from "react";
 import type { Role } from "@/lib/api/types";
-import { permissions } from "@/data/role";
-import toast from "react-hot-toast";
+import { useUpdateRole } from "@/hooks/use-role";
+import { usePermissionApi } from "@/hooks/use-permission";
 
 const formSchema = z.object({
 	name: z.string().min(1, "Nama role tidak boleh kosong"),
-	key: z.string().min(1, "Key tidak boleh kosong"),
-	permissions: z.array(z.number()).optional(),
+	permission_ids: z.array(z.number()).min(1, "Pilih minimal satu permission"),
 });
 
 interface ActionCellProps {
@@ -39,27 +38,37 @@ interface ActionCellProps {
 export function ActionCell({ role, onDataChange }: ActionCellProps) {
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
+	const updateRoleMutation = useUpdateRole();
+	const { data: permissions } = usePermissionApi();
+
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
 			name: role.name,
-			key: role.key,
-			permissions: role.permissions.map((p) => p.id),
+			permission_ids: role.permissions.map((p) => p.id),
 		},
 	});
 
 	useEffect(() => {
 		form.reset({
 			name: role.name,
-			key: role.key,
-			permissions: role.permissions.map((p) => p.id),
+			permission_ids: role.permissions.map((p) => p.id),
 		});
 	}, [role, form]);
 
-	const handleEdit = () => {
-		toast.success("Role berhasil diperbarui!");
-		onDataChange?.();
-		setIsEditDialogOpen(false);
+	const handleEdit = async (data: z.infer<typeof formSchema>) => {
+		try {
+			await updateRoleMutation.mutateAsync({
+				id: role.id,
+				data: {
+					permission_ids: data.permission_ids,
+				},
+			});
+			onDataChange?.();
+			setIsEditDialogOpen(false);
+		} catch {
+			// Error is handled by the mutation
+		}
 	};
 
 	return (
@@ -86,7 +95,7 @@ export function ActionCell({ role, onDataChange }: ActionCellProps) {
 									<FormItem>
 										<FormLabel>Nama Role</FormLabel>
 										<FormControl>
-											<Input {...field} />
+											<Input readOnly {...field} />
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -94,7 +103,7 @@ export function ActionCell({ role, onDataChange }: ActionCellProps) {
 							/>
 							<FormField
 								control={form.control}
-								name="permissions"
+								name="permission_ids"
 								render={({ field }) => (
 									<FormItem>
 										<div className="flex items-center justify-between">
@@ -104,14 +113,14 @@ export function ActionCell({ role, onDataChange }: ActionCellProps) {
 													id="select-all-permissions"
 													checked={
 														field.value?.length ===
-														permissions.length
+														permissions?.length
 													}
 													onCheckedChange={(
 														checked
 													) => {
 														if (checked) {
 															field.onChange(
-																permissions.map(
+																permissions?.map(
 																	(p) => p.id
 																)
 															);
@@ -129,7 +138,7 @@ export function ActionCell({ role, onDataChange }: ActionCellProps) {
 											</div>
 										</div>
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2 max-h-60 overflow-y-auto border rounded-md p-3">
-											{permissions.map((permission) => (
+											{permissions?.map((permission) => (
 												<div
 													key={permission.id}
 													className="flex items-center space-x-2"

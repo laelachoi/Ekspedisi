@@ -33,11 +33,6 @@ export interface PermissionResponse {
 	data: Permission[];
 }
 
-export interface UpdateRoleRequest {
-	name?: string;
-	permission_ids?: number[];
-}
-
 export interface UpdateRolePermissionsRequest {
 	permission_ids: number[];
 }
