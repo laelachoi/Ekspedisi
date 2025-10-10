@@ -23,6 +23,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { AddSquare } from "iconsax-reactjs";
 import { branchSchema, type BranchFormData } from "@/lib/validations/branch";
+import { useCreateBranch } from "@/hooks/use-branch";
 
 interface AddBranchModalProps {
 	onBranchAdded?: () => void;
@@ -31,6 +32,8 @@ interface AddBranchModalProps {
 export function AddBranchModal({ onBranchAdded }: AddBranchModalProps) {
 	const [isLoading, setIsLoading] = useState(false);
 	const [isOpen, setIsOpen] = useState(false);
+
+	const createBranchMutation = useCreateBranch();
 
 	const form = useForm<BranchFormData>({
 		resolver: zodResolver(branchSchema),
@@ -42,12 +45,8 @@ export function AddBranchModal({ onBranchAdded }: AddBranchModalProps) {
 	});
 
 	async function onSubmit(_values: BranchFormData) {
-		try {
-			setIsLoading(true);
-			// TODO: Implement actual API call when backend is ready
-			console.log("Creating branch with data:", _values);
-			await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API call
-			toast.success("Cabang berhasil ditambahkan!");
+		try {			
+			await createBranchMutation.mutateAsync(_values);
 			setIsOpen(false);
 			form.reset();
 			onBranchAdded?.();
@@ -147,9 +146,11 @@ export function AddBranchModal({ onBranchAdded }: AddBranchModalProps) {
 							<Button
 								type="submit"
 								variant="darkGreen"
-								disabled={isLoading}
+								disabled={createBranchMutation.isPending}
 							>
-								{isLoading ? "Menyimpan..." : "Simpan"}
+								{createBranchMutation.isPending 
+									? "Menyimpan..." 
+									: "Simpan"}
 							</Button>
 						</DialogFooter>
 					</form>

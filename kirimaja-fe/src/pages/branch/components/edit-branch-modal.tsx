@@ -23,10 +23,11 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 
 import { branchSchema, type BranchFormData } from "@/lib/validations/branch";
-import type { BranchItem } from "@/data/branch";
+import type { Branch } from "@/lib/api";
+import { useUpdateBranch } from "@/hooks/use-branch";
 
 interface EditBranchModalProps {
-	branch: BranchItem;
+	branch: Branch;
 	onBranchUpdated?: () => void;
 }
 
@@ -36,6 +37,8 @@ export function EditBranchModal({
 }: EditBranchModalProps) {
 	const [isLoading, setIsLoading] = useState(false);
 	const [isOpen, setIsOpen] = useState(false);
+
+	const updateBranchMutation = useUpdateBranch();
 
 	const form = useForm<BranchFormData>({
 		resolver: zodResolver(branchSchema),
@@ -49,9 +52,10 @@ export function EditBranchModal({
 	async function onSubmit(values: BranchFormData) {
 		try {
 			setIsLoading(true);
-			// TODO: Implement actual API call when backend is ready
-			console.log("Updating branch with data:", values);
-			await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API call
+			await updateBranchMutation.mutateAsync({
+				id: branch.id,
+				data: values,
+			});
 			toast.success("Cabang berhasil diperbarui!");
 			setIsOpen(false);
 			onBranchUpdated?.();
@@ -154,9 +158,9 @@ export function EditBranchModal({
 							<Button
 								type="submit"
 								variant="darkGreen"
-								disabled={isLoading}
+								disabled={updateBranchMutation.isPending}
 							>
-								{isLoading ? "Menyimpan..." : "Simpan"}
+								{updateBranchMutation.isPending ? "Menyimpan..." : "Simpan"}
 							</Button>
 						</DialogFooter>
 					</form>
