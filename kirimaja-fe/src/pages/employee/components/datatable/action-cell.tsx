@@ -24,41 +24,20 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import type { UpdateEmployeeBranchRequest } from "@/lib/api";
-import { useState } from "react";
+import { UserRole, type EmployeeBranch, type UpdateEmployeeBranchRequest } from "@/lib/api";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import toast from "react-hot-toast";
 import { PermissionGuard } from "@/components/permission-guard";
-import type { EmployeeItem } from "@/data/employee";
-import { branches } from "@/data/branch";
-
-const employeeSchema = z.object({
-	name: z
-		.string()
-		.min(2, "Nama minimal 2 karakter")
-		.max(100, "Nama maksimal 100 karakter"),
-	email: z.string().email("Email harus valid"),
-	phone_number: z
-		.string()
-		.min(10, "Nomor telepon minimal 10 digit")
-		.regex(/^[0-9+\-\s()]+$/, "Format nomor telepon tidak valid"),
-	type: z
-		.enum(["courier", "admin"], {
-			required_error: "Pilih tipe karyawan",
-		})
-		.optional(),
-	branch_id: z.coerce.number().min(1, "Pilih cabang").optional(),
-	password: z
-		.string()
-		.min(6, "Password minimal 6 karakter")
-		.optional()
-		.or(z.literal("")),
-});
+import { updateEmployeeSchema } from "@/lib/validations";
+import { useDeleteEmployee, useEmployees, useUpdateEmployee } from "@/hooks/use-employee";
+import { useAuth } from "@/hooks/use-auth";
+import { useBranches } from "@/hooks/use-branch";
 
 interface ActionCellProps {
-	employee: EmployeeItem;
+	employee: EmployeeBranch;
 	onDataChange?: () => void;
 }
 
@@ -67,39 +46,75 @@ export function ActionCell({ employee, onDataChange }: ActionCellProps) {
 	const [isEditDialogOpen, setEditDialogOpen] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
 
-	const form = useForm<z.infer<typeof employeeSchema>>({
-		resolver: zodResolver(employeeSchema),
+	const updateEmployeeMutation = useUpdateEmployee();
+	const deleteEmployeeMutation = useDeleteEmployee();
+	const { user } = useAuth();
+
+	const isAdminBranch = user?.role?.key === "admin-branch";
+	const { data: employees = []} = useEmployees();
+
+	const { data: branches = [], isLoading: isLoadingBranches } = useBranches({
+		enabled: !isAdminBranch,
+	});
+
+	const adminEmployee = isAdminBranch
+		? employees.find((emp) => emp.user_id === user?.id)
+		: null;
+
+	const defaultBranchId = adminEmployee?.branch_id;
+
+	const isEmployeeFromSameBranch = isAdminBranch
+		? employee.branch_id === defaultBranchId
+		: true;
+
+	const form = useForm<typeof updateEmployeeSchema._type>({
+		resolver: zodResolver(updateEmployeeSchema),
 		defaultValues: {
-			name: employee.user.name,
-			email: employee.user.email,
-			phone_number: employee.user.phone_number,
-			type: employee.type,
-			branch_id: employee.branch_id,
+			name: employee.user?.name || "",
+			email: employee.user?.email || "",
+			phone_number: employee.user?.phone_number || "",
+			type: isAdminBranch ? "courier" : employee.type,
+			branch_id: isAdminBranch ? defaultBranchId : employee.branch_id,
 			password: "",
 		},
 	});
 
-	const handleEdit = async (values: z.infer<typeof employeeSchema>) => {
+	useEffect(() => {
+		if (
+			isAdminBranch &&
+			defaultBranchId &&
+			defaultBranchId !== form.getValues("branch_id")
+		) {
+			form.setValue("branch_id", defaultBranchId);
+		}
+	}, [isAdminBranch, defaultBranchId, form]);
+
+	const handleEdit = async (values: z.infer<typeof updateEmployeeSchema>) => {
 		try {
 			setIsLoading(true);
 			const requestData: UpdateEmployeeBranchRequest = {
 				name: values.name,
 				email: values.email,
 				phone_number: values.phone_number,
-				type: values.type || employee.type,
-				role_id: (values.type || employee.type) === "courier" ? 3 : 4,
-				branch_id: values.branch_id || employee.branch_id,
+				type: isAdminBranch ? "courier": values.type,
+				role_id: isAdminBranch 
+					? UserRole.COURIER
+					: values.type === "courier"
+					? UserRole.COURIER
+					: UserRole.ADMIN_BRANCH,
+				branch_id: isAdminBranch ? defaultBranchId! : values.branch_id,
 			};
 
 			if (values.password && values.password.length > 0) {
 				requestData.password = values.password;
 			}
 
-			// TODO: Implement actual API call when backend is ready
-			console.log("Updating employee with data:", requestData);
-			await new Promise((resolve) => setTimeout(resolve, 1000));
+			await updateEmployeeMutation.mutateAsync({
+				id: employee.id,
+				data: requestData,
+			});
 
-			toast.success("Karyawan berhasil diperbarui!");
+			toast.success("Karyawan berhasil diperbarui");
 			setEditDialogOpen(false);
 			onDataChange?.();
 		} catch (error) {
@@ -113,11 +128,9 @@ export function ActionCell({ employee, onDataChange }: ActionCellProps) {
 	const handleDelete = async () => {
 		try {
 			setIsLoading(true);
-			// TODO: Implement actual API call when backend is ready
-			console.log("Deleting employee:", employee.id);
-			await new Promise((resolve) => setTimeout(resolve, 1000));
+			await deleteEmployeeMutation.mutateAsync(employee.id);
 
-			toast.success("Karyawan berhasil dihapus!");
+			toast.success("Karyawan berhasil dihapus");
 			setDeleteDialogOpen(false);
 			onDataChange?.();
 		} catch (error) {
@@ -127,6 +140,10 @@ export function ActionCell({ employee, onDataChange }: ActionCellProps) {
 			setIsLoading(false);
 		}
 	};
+
+	if (!isEmployeeFromSameBranch) {
+		return <div className="flex space-x-2">-</div>;
+	}
 
 	return (
 		<div className="flex space-x-2">
@@ -216,6 +233,7 @@ export function ActionCell({ employee, onDataChange }: ActionCellProps) {
 											<Select
 												onValueChange={field.onChange}
 												value={field.value}
+												disabled={isAdminBranch}
 											>
 												<FormControl>
 													<SelectTrigger>
@@ -224,51 +242,64 @@ export function ActionCell({ employee, onDataChange }: ActionCellProps) {
 												</FormControl>
 												<SelectContent>
 													<SelectItem value="courier">
-														Courier
+														Kurir
 													</SelectItem>
-													<SelectItem value="admin">
-														Admin
-													</SelectItem>
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="branch_id"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Cabang</FormLabel>
-											<Select
-												onValueChange={(value) =>
-													field.onChange(
-														parseInt(value)
-													)
-												}
-												value={field.value?.toString()}
-											>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder="Pilih cabang" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													{branches.map((branch) => (
-														<SelectItem
-															key={branch.id}
-															value={branch.id.toString()}
-														>
-															{branch.name}
+													{!isAdminBranch && (
+														<SelectItem value="admin">
+															Admin
 														</SelectItem>
-													))}
+													)}
 												</SelectContent>
 											</Select>
 											<FormMessage />
 										</FormItem>
 									)}
 								/>
+
+								{!isAdminBranch && (
+									<FormField
+										control={form.control}
+										name="branch_id"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Cabang</FormLabel>
+												<Select
+													onValueChange={(value) =>
+														field.onChange(
+															parseInt(value)
+														)
+													}
+													value={field.value?.toString()}
+													defaultValue={field.value?.toString()}
+													disabled={user?.role?.key === "admin_branch"}
+												>
+													<FormControl>
+														<SelectTrigger>
+															<SelectValue placeholder="Pilih cabang" />
+														</SelectTrigger>
+													</FormControl>
+													<SelectContent>
+														{isLoadingBranches ? (
+															<SelectItem value="">
+																Memuat cabang...
+															</SelectItem>												
+														): (
+															branches.map((branch) => (
+															<SelectItem
+																key={branch.id}
+																value={branch.id.toString()}
+															>
+																{branch.name}
+															</SelectItem>
+															))
+														)}
+													</SelectContent>
+												</Select>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+								)}
 								<FormField
 									control={form.control}
 									name="password"
@@ -298,10 +329,10 @@ export function ActionCell({ employee, onDataChange }: ActionCellProps) {
 									</Button>
 									<Button
 										type="submit"
-										disabled={isLoading}
+										disabled={updateEmployeeMutation.isPending}
 										variant="darkGreen"
 									>
-										{isLoading ? "Menyimpan..." : "Simpan"}
+										{updateEmployeeMutation.isPending ? "Menyimpan..." : "Simpan"}
 									</Button>
 								</DialogFooter>
 							</form>
@@ -343,9 +374,9 @@ export function ActionCell({ employee, onDataChange }: ActionCellProps) {
 							<Button
 								variant="destructive"
 								onClick={handleDelete}
-								disabled={isLoading}
+								disabled={deleteEmployeeMutation.isPending}
 							>
-								{isLoading ? "Menghapus..." : "Hapus"}
+								{deleteEmployeeMutation.isPending ? "Menghapus..." : "Hapus"}
 							</Button>
 						</DialogFooter>
 					</DialogContent>

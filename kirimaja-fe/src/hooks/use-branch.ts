@@ -13,11 +13,12 @@ export const branchKeys = {
 };
 
 // Get all branches
-export const useBranches = () => {
+export const useBranches = (options?: { enabled?: boolean }) => {
     return useQuery({
         queryKey: branchKeys.lists(),
         queryFn: branchService.getAll,
         staleTime: 5 * 60 * 1000, // 5 minutes
+        enabled: options?.enabled ?? true,
     });
 };
 
