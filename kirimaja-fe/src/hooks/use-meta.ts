@@ -29,89 +29,89 @@ export const useMeta = (meta: MetaData) => {
 
 export const META_DATA: Record<string, MetaData> = {
 	dashboard: {
-		title: "Dashboard - KirimAja",
+		title: "Dashboard - Gokirim",
 		description:
 			"Dashboard utama untuk mengelola pengiriman dan melihat statistik pengiriman paket",
 	},
 	login: {
-		title: "Login - KirimAja",
+		title: "Login - Gokirim",
 		description:
-			"Masuk ke akun KirimAja untuk mengakses layanan pengiriman paket",
+			"Masuk ke akun Gokirim untuk mengakses layanan pengiriman paket",
 	},
 	register: {
-		title: "Daftar - KirimAja",
+		title: "Daftar - Gokirim",
 		description:
-			"Daftar akun baru KirimAja untuk mulai menggunakan layanan pengiriman",
+			"Daftar akun baru Gokirim untuk mulai menggunakan layanan pengiriman",
 	},
 	profile: {
-		title: "Profil - KirimAja",
+		title: "Profil - Gokirim",
 		description:
-			"Kelola informasi profil dan pengaturan akun KirimAja Anda",
+			"Kelola informasi profil dan pengaturan akun Gokirim Anda",
 	},
 	delivery: {
-		title: "Pengiriman - KirimAja",
+		title: "Pengiriman - Gokirim",
 		description:
 			"Kelola dan pantau semua pengiriman paket yang sedang berlangsung",
 	},
 	"send-package": {
-		title: "Kirim Paket - KirimAja",
+		title: "Kirim Paket - Gokirim",
 		description:
-			"Kirim paket dengan mudah dan aman melalui layanan KirimAja",
+			"Kirim paket dengan mudah dan aman melalui layanan Gokirim",
 	},
 	"send-package-add": {
-		title: "Buat Pengiriman Baru - KirimAja",
+		title: "Buat Pengiriman Baru - Gokirim",
 		description:
 			"Buat pengiriman paket baru dengan mengisi detail alamat dan informasi paket",
 	},
 	"send-package-detail": {
-		title: "Detail Pengiriman - KirimAja",
+		title: "Detail Pengiriman - Gokirim",
 		description:
 			"Lihat detail lengkap pengiriman paket dan informasi tracking",
 	},
 	"send-package-pay": {
-		title: "Pembayaran Pengiriman - KirimAja",
+		title: "Pembayaran Pengiriman - Gokirim",
 		description: "Lakukan pembayaran untuk pengiriman paket Anda",
 	},
 	history: {
-		title: "Riwayat Pengiriman - KirimAja",
+		title: "Riwayat Pengiriman - Gokirim",
 		description:
 			"Lihat riwayat semua pengiriman paket yang pernah Anda lakukan",
 	},
 	"history-detail": {
-		title: "Detail Riwayat Pengiriman - KirimAja",
+		title: "Detail Riwayat Pengiriman - Gokirim",
 		description: "Lihat detail lengkap riwayat pengiriman paket",
 	},
 	"track-package": {
-		title: "Lacak Paket - KirimAja",
+		title: "Lacak Paket - Gokirim",
 		description: "Lacak dan cek status pengiriman paket dengan nomor resi",
 	},
 	branch: {
-		title: "Kelola Cabang - KirimAja",
-		description: "Kelola informasi cabang dan lokasi layanan KirimAja",
+		title: "Kelola Cabang - Gokirim",
+		description: "Kelola informasi cabang dan lokasi layanan Gokirim",
 	},
 	role: {
-		title: "Kelola Role - KirimAja",
+		title: "Kelola Role - Gokirim",
 		description: "Kelola role dan hak akses pengguna dalam sistem",
 	},
 	employee: {
-		title: "Kelola Karyawan - KirimAja",
+		title: "Kelola Karyawan - Gokirim",
 		description: "Kelola data karyawan dan informasi personil",
 	},
 	"user-addresses": {
-		title: "Alamat Saya - KirimAja",
+		title: "Alamat Saya - Gokirim",
 		description:
 			"Kelola alamat pengiriman dan penerima untuk kemudahan berkirim",
 	},
 	"user-addresses-add": {
-		title: "Tambah Alamat - KirimAja",
+		title: "Tambah Alamat - Gokirim",
 		description: "Tambah alamat baru untuk pengiriman paket",
 	},
 	"user-addresses-edit": {
-		title: "Edit Alamat - KirimAja",
+		title: "Edit Alamat - Gokirim",
 		description: "Edit dan perbarui informasi alamat pengiriman",
 	},
 	"shipment-branch": {
-		title: "Pengiriman Cabang - KirimAja",
+		title: "Pengiriman Cabang - Gokirim",
 		description: "Kelola pengiriman antar cabang dan transfer paket",
 	},
 };

@@ -1,6 +1,6 @@
 import { handleAxiosError } from "@/lib/utils/error-handler";
 import { apiClient } from "../axios";
-import type { Role, RoleResponse, SingleRoleResponse, UpdateRolePermissionsRequest } from "../types";
+import type { Role, RoleResponse, SingleRoleResponse, UpdateRolePermissionsRequest } from "../types/role";
 import type { AxiosErrorType } from "@/lib/utils/api-error-types";
 
 export const roleService = {
