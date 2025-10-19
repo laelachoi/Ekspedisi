@@ -22,11 +22,9 @@ export interface ProfileResponse {
 export interface UpdateProfileRequest {
 	name?: string;
 	phone_number?: string;
-	avatar?: string; // binary format in multipart
+	password?: string; 
 }
 
-export interface UpdateProfileResponse {
-	data: LegacyUser;
-	message: string;
-	success: boolean;
+export interface UpdateProfileWithAvatarRequest extends UpdateProfileRequest {
+	avatar?: File;
 }

@@ -2,12 +2,14 @@ import { Button } from "@/components/ui/button";
 import { Page } from "@/components/ui/page";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { profileSchema, type ProfileFormData } from "@/lib/validations/profile";
-import toast, { Toaster } from "react-hot-toast";
+import { updateProfileSchema, type UpdateProfileFormData } from "@/lib/validations/profile";
+import toast from "react-hot-toast";
 import { useMeta, META_DATA } from "@/hooks/use-meta";
+import { useProfile, useUpdateProfileWithAvatar } from "@/hooks/use-profile";
+import { API_CONFIG } from "@/lib/api/config";
 
 const Index = () => {
 	const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
@@ -17,12 +19,17 @@ const Index = () => {
 	// Use custom meta hook instead of react-helmet
 	useMeta(META_DATA.profile);
 
+	const { data: profile, isLoading, error } = useProfile();
+	const updateProfileMutation = useUpdateProfileWithAvatar();
+
 	// React Hook Form setup
 	const {
 		register,
+		handleSubmit,
+		reset,
 		formState: { errors },
-	} = useForm<ProfileFormData>({
-		resolver: zodResolver(profileSchema),
+	} = useForm<UpdateProfileFormData>({
+		resolver: zodResolver(updateProfileSchema),
 		defaultValues: {
 			name: "",
 			email: "",
@@ -67,19 +74,85 @@ const Index = () => {
 		}
 	};
 
+	useEffect(() => {
+		if (profile) {
+			reset({
+				name: profile.name,
+				email: profile.email,
+				phone_number: profile.phone_number,
+				password: "",
+			});
+		}
+	}, [profile, reset]);
+
+	// Handle form submission
+	const onSubmit = async (data: UpdateProfileFormData) => {
+		try {
+			const updateData = {
+				name: data.name,
+				phone_number: data.phone_number,
+				avatar: selectedAvatar || undefined,
+				password: data.password || undefined,
+			};
+			await updateProfileMutation.mutateAsync(updateData);
+			reset({
+				...data,
+				password: "", // Reset password field after update
+			});
+		} catch (error) {
+			console.error("Failed to update profile:", error);
+		}
+	};
+
+	if (isLoading) {
+		return (
+			<Page title="Profile">
+				<div className="flex items-center justify-center h-64">
+					<div className="text-center">
+						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+						<p className="mt-2 text-gray-600">Loading profile...</p>
+					</div>
+				</div>
+			</Page>
+		);
+	}
+
+	if (error) {
+		return (
+			<Page title="Profile">
+				<div className="flex items-center justify-center h-64">
+					<div className="text-center">
+						<p className="text-red-600">Failed to load profile</p>
+						<Button
+							onClick={() => window.location.reload()}
+							className="mt-2"
+						>
+							Retry
+						</Button>
+					</div>
+				</div>
+			</Page>
+		);
+	}
+
 	return (
 		<>
 			<Page title="Profile">
 				<div className="grid grid-cols-1">
 					<div className="space-y-6">
-						<form className="bg-gray-50 rounded-lg p-6">
+						<form 
+							className="bg-gray-50 rounded-lg p-6" 
+							onSubmit={handleSubmit(onSubmit)}
+						>
 							{/* Avatar Section */}
 							<div className="flex gap-4 items-center mb-8">
 								<div className="relative">
 									<img
 										src={
 											avatarPreview ||
-											"/images/vespa-tiger.jpg"
+											(profile?.avatar
+												? `${API_CONFIG.baseURL}/${profile.avatar}`
+												: "/images/vespa-tiger.jpg")
 										}
 										alt="Profile"
 										className="size-[100px] rounded-full object-cover border-4 border-white shadow-md"
@@ -219,14 +292,16 @@ const Index = () => {
 									type="submit"
 									variant="darkGreen"
 									className="py-3"
+									disabled={updateProfileMutation.isPending}
 								>
-									Update Profile
+									{updateProfileMutation.isPending
+										? "Memperbarui..."
+										: "Perbarui Profile"}
 								</Button>
 							</div>
 						</form>
 					</div>
 				</div>
-				<Toaster position="top-right" />
 			</Page>
 		</>
 	);
