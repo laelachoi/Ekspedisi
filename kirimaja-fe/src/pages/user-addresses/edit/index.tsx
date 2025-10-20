@@ -3,8 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import toast from "react-hot-toast";
-import type { UserAddress } from "@/lib/api/types/user-address";
 import { Upload, MapPin, Slash } from "lucide-react";
 import { useRef } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,28 +22,25 @@ import {
 } from "@/components/ui/breadcrumb";
 import { useMeta, META_DATA } from "@/hooks/use-meta";
 import { Textarea } from "@/components/ui/textarea";
-// Import dummy data
-import { userAddresses } from "@/data/user-addresses";
-
-// Get the API base URL for image handling
-const API_BASE_URL =
-	import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+import { API_CONFIG } from "@/lib/api/config";
+import { useUpdateUserAddress, useUserAddress } from "@/hooks/use-user-address";
 
 const getImageUrl = (photoPath: string) => {
 	if (!photoPath) return "";
 	if (photoPath.startsWith("http")) return photoPath;
-	return `${API_BASE_URL}/${photoPath.replace(/^\//, "")}`;
+	return `${API_CONFIG.baseURL}/${photoPath.replace(/^\//, "")}`;
 };
 
 export default function EditUserAddressPage() {
 	// Use custom meta hook
 	useMeta(META_DATA["user-addresses-edit"]);
 	const navigate = useNavigate();
-	const { id: addressId } = useParams();
+	const { id } = useParams();
+	const addressId = parseInt(id!);
 
-	const [loading, setLoading] = useState(false);
-	const [fetchLoading, setFetchLoading] = useState(true);
-	const [userAddress, setUserAddress] = useState<UserAddress | null>(null);
+	const { data: address, isLoading } = useUserAddress(addressId);
+	const updateUserAddress = useUpdateUserAddress();
+
 	const [, setSelectedPhoto] = useState<File | null>(null);
 	const [photoPreview, setPhotoPreview] = useState<string>("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -68,67 +63,20 @@ export default function EditUserAddressPage() {
 	});
 
 	useEffect(() => {
-		if (!addressId) {
-			toast.error("Address ID is required");
-			navigate("/user-addresses");
-			return;
-		}
+		if (address) {
+			reset ({
+				address: address.address,
+				tag: address.tag,
+				label: address.label,
+				photo: undefined,
+			});
 
-		const fetchAddress = async () => {
-			try {
-				// Find address in dummy data
-				const id = parseInt(addressId);
-				const foundAddress = userAddresses.find(
-					(addr) => addr.id === id
-				);
-
-				if (!foundAddress) {
-					throw new Error("Address not found");
-				}
-
-				// Convert the dummy data to match the UserAddress type
-				const data: UserAddress = {
-					id: foundAddress.id,
-					user_id: foundAddress.user_id,
-					address: foundAddress.address,
-					tag: foundAddress.tag,
-					label: foundAddress.label,
-					photo: foundAddress.photo,
-					latitude: foundAddress.latitude || 0,
-					longitude: foundAddress.longitude || 0,
-					created_at: foundAddress.created_at,
-					updated_at: foundAddress.updated_at,
-					user: foundAddress.user,
-				};
-
-				setUserAddress(data);
-
-				// Update form values using React Hook Form
-				reset({
-					address: data.address,
-					tag: data.tag,
-					label: data.label,
-					photo: undefined,
-				});
-
-				// Set photo preview with proper base URL
-				if (data.photo) {
-					setPhotoPreview(getImageUrl(data.photo));
-				}
-			} catch (error: unknown) {
-				const errorMessage =
-					error instanceof Error
-						? error.message
-						: "Failed to fetch address";
-				toast.error(errorMessage);
-				navigate("/user-addresses");
-			} finally {
-				setFetchLoading(false);
+			// Set photo preview with proper base URL
+			if (address.photo) {
+				setPhotoPreview(getImageUrl(address.photo));
 			}
-		};
-
-		fetchAddress();
-	}, [addressId, navigate, reset]);
+		}
+	}, [address, reset]);
 
 	const handlePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
@@ -156,32 +104,20 @@ export default function EditUserAddressPage() {
 	};
 
 	const onSubmit = async (data: UpdateUserAddressFormData) => {
-		if (!userAddress) return;
-
-		setLoading(true);
-
-		try {
-			// Simulate API update with timeout
-			await new Promise((resolve) => setTimeout(resolve, 800));
-
-			// For development with dummy data, just show success message
-			// Address update simulation completed
-			console.log("Submitting updated address data:", data);
-
-			toast.success("Alamat berhasil diperbarui");
-			navigate("/user-addresses");
-		} catch (error: unknown) {
-			const errorMessage =
-				error instanceof Error
-					? error.message
-					: "Gagal memperbarui alamat";
-			toast.error(errorMessage);
-		} finally {
-			setLoading(false);
-		}
+		updateUserAddress.mutate(
+			{
+				id: addressId,
+				data,
+			},
+			{
+				onSuccess: () => {
+					navigate("/user-addresses");
+				}
+			}
+		)
 	};
 
-	if (fetchLoading) {
+	if (isLoading) {
 		return (
 			<>
 				<main className="px-8 py-6">
@@ -325,10 +261,10 @@ export default function EditUserAddressPage() {
 									<Button
 										variant="darkGreen"
 										type="submit"
-										disabled={loading}
+										disabled={updateUserAddress.isPending}
 										className="w-full"
 									>
-										{loading
+										{updateUserAddress.isPending
 											? "Menyimpan..."
 											: "Simpan Perubahan"}
 									</Button>

@@ -5,7 +5,7 @@ export interface CreateUserAddressRequest {
 	address: string;
 	tag: string;
 	label: string;
-	photo?: string; // binary format in multipart
+	photo?: File; // binary format in multipart
 	latitude?: number;
 	longitude?: number;
 }

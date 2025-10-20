@@ -9,9 +9,9 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { useState } from "react";
-import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
 import type { UserAddress } from "@/lib/api/types/user-address";
+import { useDeleteUserAddress } from "@/hooks/use-user-address";
 
 interface ActionCellProps {
 	userAddress: UserAddress;
@@ -21,21 +21,17 @@ interface ActionCellProps {
 export function ActionCell({ userAddress, onDataChange }: ActionCellProps) {
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+	const deleteUserAddress = useDeleteUserAddress();
+
 	const handleDelete = async () => {
-		try {
-			// Simulate API call
-			await new Promise((resolve) => setTimeout(resolve, 500));
-			toast.success("Alamat berhasil dihapus");
-			onDataChange?.();
-		} catch (error: unknown) {
-			const errorMessage =
-				error instanceof Error
-					? error.message
-					: "Gagal menghapus alamat";
-			toast.error(errorMessage);
-		} finally {
-			setDeleteDialogOpen(false);
-		}
+		deleteUserAddress.mutate(userAddress.id, {
+			onSuccess: () => {
+				onDataChange?.();
+			},
+			onSettled: () => {
+				setDeleteDialogOpen(false);
+			},
+		});
 	};
 
 	const handleViewLocation = () => {
@@ -70,6 +66,7 @@ export function ActionCell({ userAddress, onDataChange }: ActionCellProps) {
 						variant="destructive"
 						size="sm"
 						className="rounded-lg"
+						disabled={deleteUserAddress.isPending}
 					>
 						Hapus
 					</Button>

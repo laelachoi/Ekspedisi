@@ -20,13 +20,18 @@ import {
 } from "@/components/ui/breadcrumb";
 import { useMeta, META_DATA } from "@/hooks/use-meta";
 import { Textarea } from "@/components/ui/textarea";
+import { useNavigate } from "react-router-dom";
+import { useCreateUserAddress } from "@/hooks/use-user-address";
+import { toast } from "react-hot-toast";
 
 export default function AddUserAddressPage() {
 	// Use custom meta hook
 	useMeta(META_DATA["user-addresses-add"]);
 
-	const [loading, setLoading] = useState(false);
-	const [, setSelectedPhoto] = useState<File | null>(null);
+	const navigate = useNavigate();
+	const createUserAddress = useCreateUserAddress();
+
+	const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
 	const [photoPreview, setPhotoPreview] = useState<string>("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -34,8 +39,6 @@ export default function AddUserAddressPage() {
 		register,
 		handleSubmit,
 		formState: { errors },
-		setValue,
-		trigger,
 	} = useForm<CreateUserAddressFormData>({
 		resolver: zodResolver(createUserAddressSchema),
 		defaultValues: {
@@ -47,26 +50,35 @@ export default function AddUserAddressPage() {
 	});
 
 	const onSubmit = async (data: CreateUserAddressFormData) => {
-		try {
-			setLoading(true);
-			// Simulate API call
-			await new Promise((resolve) => setTimeout(resolve, 1000));
-			console.log("Address data:", data);
-			// Handle successful submission here
-		} catch (error) {
-			console.error("Error adding address:", error);
-		} finally {
-			setLoading(false);
-		}
+		const submitData = {
+			address: data.address,
+			tag: data.tag,
+			label: data.label,
+			photo: selectedPhoto || undefined,
+		};
+
+		createUserAddress.mutate(submitData, {
+			onSuccess: () => {
+				navigate("/user-addresses");
+			},
+		});
 	};
 
 	const handlePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
 		if (file) {
-			setSelectedPhoto(file);
-			setValue("photo", file);
-			trigger("photo");
+			if (!file.type.startsWith("image/")) {
+				toast.error("Please select an image file");
+				return;
+			}
 
+			// Validate file size (e.g., max 5MB)
+			if (file.size > 5 * 1024 * 1024) {
+				toast.error("Image size should be less than 5MB");
+				return;
+			}
+
+			setSelectedPhoto(file);
 			// Create preview URL
 			const reader = new FileReader();
 			reader.onload = (e) => {
@@ -79,7 +91,6 @@ export default function AddUserAddressPage() {
 	const removePhoto = () => {
 		setSelectedPhoto(null);
 		setPhotoPreview("");
-		setValue("photo", undefined);
 		if (fileInputRef.current) {
 			fileInputRef.current.value = "";
 		}
@@ -184,10 +195,10 @@ export default function AddUserAddressPage() {
 									<Button
 										variant="darkGreen"
 										type="submit"
-										disabled={loading}
+										disabled={createUserAddress.isPending}
 										className="w-full"
 									>
-										{loading ? "Menyimpan..." : "Simpan"}
+										{createUserAddress.isPending ? "Menyimpan..." : "Simpan"}
 									</Button>
 								</div>
 							</div>
@@ -206,15 +217,17 @@ export default function AddUserAddressPage() {
 												alt="Address preview"
 												className="w-full h-64 object-cover rounded-lg border"
 											/>
-											<Button
-												type="button"
-												variant="destructive"
-												size="sm"
-												className="absolute top-2 right-2 h-8 w-8 p-0 rounded-full"
-												onClick={removePhoto}
-											>
-												×
-											</Button>
+											{selectedPhoto && (
+												<Button
+													type="button"
+													variant="destructive"
+													size="sm"
+													className="absolute top-2 right-2 h-8 w-8 p-0 rounded-full"
+													onClick={removePhoto}
+												>
+													×
+												</Button>
+											)}
 										</div>
 									) : (
 										<div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center h-64 flex flex-col justify-center">

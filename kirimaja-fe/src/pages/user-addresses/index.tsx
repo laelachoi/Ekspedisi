@@ -2,53 +2,42 @@ import { Page } from "@/components/ui/page";
 import { DataTable } from "./components/datatable";
 import { createColumns } from "./components/datatable/columns";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
-import type { UserAddress } from "@/lib/api/types/user-address";
+import { useState } from "react";
 import { Toaster } from "react-hot-toast";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddSquare } from "iconsax-reactjs";
 import { useMeta, META_DATA } from "@/hooks/use-meta";
-import { userAddresses as dummyAddresses } from "@/data/user-addresses"; // Import dummy addresses data
+import { useUserAddresses } from "@/hooks/use-user-address";
 
 export default function UserAddressesPage() {
 	// Use custom meta hook
 	useMeta(META_DATA["user-addresses"]);
 
-	const [userAddresses, setUserAddresses] = useState<UserAddress[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [refreshing, setRefreshing] = useState(false);
 	const [searchTerm, setSearchTerm] = useState("");
+	const { data: userAddresses = [], isLoading, error } = useUserAddresses();
 
-	// Load user addresses data
-	useEffect(() => {
-		// Simulate loading with a timeout
-		const loadData = async () => {
-			try {
-				setUserAddresses(dummyAddresses as UserAddress[]);
-			} catch {
-				setUserAddresses(dummyAddresses as UserAddress[]);
-				// Fallback to dummy data for development
-			} finally {
-				setLoading(false);
-			}
-		};
-
-		loadData();
-	}, [refreshing]);
-
-	// Function to refresh data
-	const handleRefresh = () => {
-		setRefreshing(true);
-		setTimeout(() => setRefreshing(false), 500); // Simulate refresh
-	};
-
-	const filtereduserAddresses = userAddresses.filter((address) =>
-		address.address.toLowerCase().includes(searchTerm.toLowerCase())
+	const filteredUserAddresses = userAddresses.filter (
+		(address) => 
+			address.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			address.tag.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			address.label.toLowerCase().includes(searchTerm.toLowerCase())
 	);
 
-	const columns = createColumns(() => handleRefresh());
+	const columns = createColumns(() => {
+		// Refresh function - TanStack Query will handle invalidation
+	});
+
+	if (error) {
+		return (
+			<Page title="Alamat Saya">
+				<div className="flex items-center justify-center h-64">
+					<p className="text-red-500">Error: {error.message}</p>
+				</div>
+			</Page>
+		);
+	}
 
 	return (
 		<>
@@ -76,7 +65,7 @@ export default function UserAddressesPage() {
 						onChange={(e) => setSearchTerm(e.target.value)}
 					/>
 				</div>
-				{loading ? (
+				{isLoading ? (
 					<div className="space-y-4">
 						<Skeleton className="h-4 w-[250px]" />
 						<Skeleton className="h-4 w-[200px]" />
@@ -84,7 +73,7 @@ export default function UserAddressesPage() {
 					</div>
 				) : (
 					<DataTable
-						data={filtereduserAddresses}
+						data={filteredUserAddresses}
 						columns={columns}
 						title="Daftar Alamat"
 					/>
