@@ -13,58 +13,28 @@ import {
 	TruckTime,
 } from "iconsax-reactjs";
 import { Slash } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import { toast } from "react-hot-toast";
-import type { Shipment } from "@/lib/api/types/shipment";
-import { PaymentStatus } from "@/lib/api/types/shipment";
 import { useMeta, META_DATA } from "@/hooks/use-meta";
-import { mockShipmentService } from "@/data/shipment";
+import { useShipment } from "@/hooks/use-shipment";
 
 const DetailPage = () => {
 	// Use custom meta hook
 	useMeta(META_DATA["send-package-pay"]);
-	const [shipment, setShipment] = useState<Shipment | null>(null);
-	const [loading, setLoading] = useState(true);
 	const { id } = useParams();
 	const navigate = useNavigate();
 
-	const shipmentId = id;
+	const shipmentId = id ? parseInt(id) : 0;
+	
+	const { data: shipment, isLoading: loading, error } = useShipment(shipmentId);
 
 	useEffect(() => {
-		const loadShipment = async () => {
-			if (!shipmentId) {
-				toast.error("ID pengiriman tidak valid");
-				navigate("/send-package");
-				return;
-			}
-
-			try {
-				setLoading(true);
-				const shipmentData = await mockShipmentService.getById(
-					parseInt(shipmentId)
-				);
-
-				// Check if payment is pending
-				if (shipmentData?.payment_status !== PaymentStatus.PENDING) {
-					toast.error(
-						"Pengiriman ini tidak memerlukan pembayaran atau sudah dibayar"
-					);
-					navigate("/send-package");
-					return;
-				}
-
-				setShipment(shipmentData);
-			} catch (error) {
-				console.error("Failed to load shipment:", error);
-				toast.error("Gagal memuat data pengiriman");
-				navigate("/send-package");
-			} finally {
-				setLoading(false);
-			}
-		};
-
-		loadShipment();
+		if (!shipmentId) {
+			toast.error("ID pengiriman tidak valid");
+			navigate("/send-package");
+			return;
+		}
 	}, [shipmentId, navigate]);
 
 	const handlePayment = async () => {
@@ -77,6 +47,12 @@ const DetailPage = () => {
 		window.open(shipment.payment.invoice_url, "_blank");
 		toast.success("Redirecting to payment page...");
 	};
+
+	if (error) {
+		toast.error("Gagal memuat data pengiriman");
+		navigate("/send-package");
+		return null;
+	}
 
 	if (loading) {
 		return (

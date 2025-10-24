@@ -8,7 +8,7 @@ export const deliveryFormSchema = z.object({
 		.min(10, "Alamat pengiriman minimal 10 karakter"),
 	senderName: z.string().min(2, "Nama pengirim minimal 2 karakter"),
 	senderPhone: z.string().regex(/^\d{10,15}$/, "Nomor telepon tidak valid"),
-	shippingType: z.enum(["REGULAR", "sameday", "nextday", "instant"]),
+	shippingType: z.enum(["regular", "same_day", "next_day"]),
 	receiverName: z.string().min(2, "Nama penerima minimal 2 karakter"),
 	receiverPhone: z.string().regex(/^\d{10,15}$/, "Nomor telepon tidak valid"),
 	totalWeight: z.number().min(100, "Berat minimal 100 gram"),

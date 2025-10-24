@@ -5,47 +5,18 @@ import { Button } from "@/components/ui/button";
 import { AddSquare } from "iconsax-reactjs";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router";
-import { useEffect, useState } from "react";
-import type { Shipment } from "@/lib/api/types/shipment";
-import toast, { Toaster } from "react-hot-toast";
+import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockShipmentService } from "@/data/shipment";
 import { useMeta, META_DATA } from "@/hooks/use-meta";
+import { useShipments } from "@/hooks/use-shipment";
+import { PermissionGuard } from "@/components";
 
 export default function SendPackagePage() {
-	return <SendPackageContent />;
-}
-
-function SendPackageContent() {
-	// Use custom meta hook
 	useMeta(META_DATA["send-package"]);
 
 	const columns = useColumns();
-	const [shipments, setShipments] = useState<Shipment[]>([]);
-	const [isLoading, setIsLoading] = useState(true);
 	const [searchQuery, setSearchQuery] = useState("");
-
-	// Load shipments using mock data
-	useEffect(() => {
-		const loadShipments = async () => {
-			try {
-				setIsLoading(true);
-				const response = await mockShipmentService.getAll();
-				setShipments(response);
-			} catch (error: unknown) {
-				const errorMessage =
-					error instanceof Error
-						? error.message
-						: "Failed to load shipments";
-				toast.error(errorMessage);
-				console.error("Error loading shipments:", error);
-			} finally {
-				setIsLoading(false);
-			}
-		};
-
-		loadShipments();
-	}, []);
+	const { data: shipments = [], isLoading, error } = useShipments(); 
 
 	// Filter shipments based on search query
 	const filteredShipments = shipments.filter(
@@ -67,47 +38,70 @@ function SendPackageContent() {
 				.includes(searchQuery.toLowerCase())
 	);
 
+	if (error) {
+		return (
+			<Page title="Kirim Paket 🚚 🏠">
+				<div className="flex items-center justify-center h-64">
+					<div className="text-center">
+						<p className="text-red-500 mb-2">
+							Error:{" "}
+							{error instanceof Error
+								? error.message
+								: "Failed to load shipments"}	
+						</p>
+						<Button onClick={() => window.location.reload()}>
+							Try Again
+						</Button>
+					</div>
+				</div>
+			</Page>
+		);
+	}
+
 	return (
 		<>
-			<Page
-				title="Kirim Paket 🚚 🏠"
-				action={
-					<Link to="/send-package/add">
-						<Button variant="darkGreen">
-							Buat Pengiriman Baru
-							<AddSquare
-								className="ml-auto"
-								variant="Bold"
-								size="20"
-							/>
-						</Button>
-					</Link>
-				}
-			>
-				<Input
-					type="text"
-					placeholder="Cari Pengiriman"
-					className="mb-4 w-full max-w-sm bg-white"
-					value={searchQuery}
-					onChange={(e) => setSearchQuery(e.target.value)}
-				/>
-
-				{isLoading ? (
-					<div className="space-y-4">
-						<Skeleton className="h-10 w-full" />
-						<Skeleton className="h-20 w-full" />
-						<Skeleton className="h-20 w-full" />
-						<Skeleton className="h-20 w-full" />
-					</div>
-				) : (
-					<DataTable
-						data={filteredShipments}
-						columns={columns}
-						title="Pengiriman Sebelumnya"
+			<PermissionGuard permission="shipments.read">
+				<Page
+					title="Kirim Paket 🚚 🏠"
+					action={
+						<PermissionGuard permission="shipments.create">
+							<Link to="/send-package/add">
+								<Button variant="darkGreen">
+									Buat Pengiriman Baru
+									<AddSquare
+										className="ml-auto"
+										variant="Bold"
+										size="20"
+									/>
+								</Button>
+							</Link>
+						</PermissionGuard>
+					}
+				>
+					<Input
+						type="text"
+						placeholder="Cari Pengiriman"
+						className="mb-4 w-full max-w-sm bg-white"
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
 					/>
-				)}
-				<Toaster position="top-right" />
-			</Page>
+
+					{isLoading ? (
+						<div className="space-y-4">
+							<Skeleton className="h-10 w-full" />
+							<Skeleton className="h-20 w-full" />
+							<Skeleton className="h-20 w-full" />
+							<Skeleton className="h-20 w-full" />
+						</div>
+					) : (
+						<DataTable
+							data={filteredShipments}
+							columns={columns}
+							title="Pengiriman Sebelumnya"
+						/>
+					)}
+				</Page>
+			</PermissionGuard>
 		</>
 	);
 }

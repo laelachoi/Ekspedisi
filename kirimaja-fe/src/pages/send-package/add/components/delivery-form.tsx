@@ -22,21 +22,20 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import type { UserAddressItem } from "@/data/user-addresses";
-import { userAddresses } from "@/data/user-addresses";
 import {
 	deliveryFormSchema,
 	type DeliveryFormData,
 } from "@/lib/validations/shipment";
+import { useUserAddresses } from "@/hooks/use-user-address";
+import { useCreateShipment } from "@/hooks/use-shipment";
+import { useProfile } from "@/hooks/use-profile";
 
 export function DeliveryForm() {
-	const [userAddressesState, setUserAddressesState] = useState<
-		UserAddressItem[]
-	>([]);
 	const [loading, setLoading] = useState(false);
-	const [addressesLoading, setAddressesLoading] = useState(true);
+	const { data: userAddresses = [], isLoading: addressesLoading } = useUserAddresses();
+	const createShipment = useCreateShipment();
+	const { data: user } = useProfile();
 	const navigate = useNavigate();
-	const user = { id: 1, name: "Demo User", phone_number: "081234567890" }; // Mock user for demo
 
 	const form = useForm<DeliveryFormData>({
 		resolver: zodResolver(deliveryFormSchema),
@@ -47,31 +46,6 @@ export function DeliveryForm() {
 		},
 	});
 
-	// Load user addresses on component mount
-	useEffect(() => {
-		const loadUserAddresses = async () => {
-			try {
-				setAddressesLoading(true);
-				// Use mock data instead of API call
-				const addresses = userAddresses;
-				setUserAddressesState(addresses);
-
-				if (addresses.length === 0) {
-					toast.error(
-						"Anda belum memiliki alamat. Silakan tambah alamat terlebih dahulu."
-					);
-				}
-			} catch (error) {
-				console.error("Failed to load user addresses:", error);
-				toast.error("Gagal memuat alamat pengguna");
-			} finally {
-				setAddressesLoading(false);
-			}
-		};
-
-		loadUserAddresses();
-	}, []);
-
 	// Update form when user data is available
 	useEffect(() => {
 		if (user) {
@@ -80,14 +54,13 @@ export function DeliveryForm() {
 		}
 	}, [user, form]);
 
-	async function onSubmit(values: DeliveryFormData) {
-		if (userAddressesState.length === 0) {
-			toast.error(
-				"Anda belum memiliki alamat. Silakan tambah alamat terlebih dahulu."
-			);
-			return;
+	useEffect(() => {
+		if (!addressesLoading && userAddresses.length === 0) {
+			navigate("/send-package/no-address");
 		}
+	}, [userAddresses.length, addressesLoading, navigate]);
 
+	async function onSubmit(values: DeliveryFormData) {
 		try {
 			setLoading(true);
 
@@ -97,20 +70,44 @@ export function DeliveryForm() {
 				return;
 			}
 
-			// Mock shipment creation - in real app would call API
-			await new Promise((resolve) => setTimeout(resolve, 1000));
-			const mockShipmentId = Math.floor(Math.random() * 1000) + 1;
+			// Create shipment using API
+			const shipmentData = {
+				pickup_address_id: parseInt(values.pickupLocationId),
+				destination_address: values.deliveryLocation,
+				recipient_name: values.receiverName,
+				recipient_phone: values.receiverPhone,
+				weight: values.totalWeight,
+				package_type: values.packageType,
+				delivery_type: values.shippingType,
+			};
 
-			toast.success("Pengiriman berhasil dibuat!");
+			const shipment = await createShipment.mutateAsync(shipmentData);
 
 			// Redirect to payment page with shipment ID
-			navigate(`/send-package/pay/${mockShipmentId}`);
+			navigate(`/send-package/pay/${shipment.id}`);
 		} catch (error) {
 			console.error("Failed to create shipment:", error);
 			toast.error("Gagal membuat pengiriman. Silakan coba lagi.");
 		} finally {
 			setLoading(false);
 		}
+	}
+
+	if (addressesLoading) {
+		return (
+			<Card className="mx-auto">
+				<CardHeader>
+					<CardTitle>Detail Pengiriman</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<div className="space-y-4">
+						<div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+						<div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+						<div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+					</div>
+				</CardContent>
+			</Card>
+		);
 	}
 
 	return (
@@ -166,7 +163,7 @@ export function DeliveryForm() {
 															</div>
 														</SelectTrigger>
 														<SelectContent>
-															{userAddressesState.map(
+															{userAddresses.map(
 																(address) => (
 																	<SelectItem
 																		key={
@@ -193,23 +190,6 @@ export function DeliveryForm() {
 												)}
 											</FormControl>
 											<FormMessage />
-											{userAddressesState.length === 0 &&
-												!addressesLoading && (
-													<p className="text-sm text-red-500">
-														Belum ada alamat.{" "}
-														<button
-															type="button"
-															className="underline"
-															onClick={() =>
-																navigate(
-																	"/user-addresses/add"
-																)
-															}
-														>
-															Tambah alamat
-														</button>
-													</p>
-												)}
 										</FormItem>
 									)}
 								/>
@@ -295,21 +275,17 @@ export function DeliveryForm() {
 														</SelectTrigger>
 													</FormControl>
 													<SelectContent>
-														<SelectItem value="REGULAR">
+														<SelectItem value="regular">
 															Regular (3-5 hari) -
-															Rp 8.000
+															Rp 5.000
 														</SelectItem>
-														<SelectItem value="sameday">
+														<SelectItem value="same_day">
 															Sameday (6–8 jam) -
 															Rp 15.000
 														</SelectItem>
-														<SelectItem value="nextday">
+														<SelectItem value="next_day">
 															Next Day (1–2 hari)
-															- Rp 13.000
-														</SelectItem>
-														<SelectItem value="instant">
-															Instant (2–4 jam) -
-															Rp 10.000
+															- Rp 10.000
 														</SelectItem>
 													</SelectContent>
 												</Select>
