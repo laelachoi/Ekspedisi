@@ -23,6 +23,7 @@ export class HistoryService {
               address: true,
             },
           },
+          payment: true,
           shipmentHistory: true,
         },
         orderBy: {
@@ -47,6 +48,7 @@ export class HistoryService {
             address: true,
           },
         },
+        payment: true,
         shipmentHistory: true,
       },
       orderBy: {

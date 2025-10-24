@@ -17,7 +17,14 @@ export class ShipmentBranchService {
                 include: {
                     shipment: {
                         include: {
-                            shipmentDetail: true,
+                            shipmentDetail: {
+                                include: {
+                                    user: true,
+                                    address: true,
+                                },
+                            },
+                            payment: true,
+                            shipmentHistory: true,
                         },
                     },
                     branch: true,
@@ -49,7 +56,14 @@ export class ShipmentBranchService {
             include: {
                 shipment: {
                     include: {
-                        shipmentDetail: true,
+                        shipmentDetail: {
+                            include: {
+                                user: true,
+                                address: true,
+                            },
+                        },
+                        payment: true,
+                        shipmentHistory: true,
                     },
                 },
                 branch: true,
@@ -83,13 +97,19 @@ export class ShipmentBranchService {
                 trackingNumber: scanData.tracking_number,
             },
             include: {
-                shipmentDetail: true,
+                shipmentDetail: {
+                    include: {
+                        user: true,
+                        address: true,
+                    },
+                },
                 shipmentHistory: {
                     orderBy: {
                         createdAt: 'desc',
                     },
                     take: 1,
                 },
+                payment: true,
             },
         });
 
@@ -125,7 +145,14 @@ export class ShipmentBranchService {
                 include: {
                     shipment: {
                         include: {
-                            shipmentDetail: true,
+                            shipmentDetail: {
+                                include: {
+                                    user: true,
+                                    address: true,
+                                },
+                            },
+                            payment: true,
+                            shipmentHistory: true,
                         },
                     },
                     branch: true,

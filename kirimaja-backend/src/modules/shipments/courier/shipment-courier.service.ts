@@ -40,7 +40,12 @@ export class ShipmentCourierService {
                 trackingNumber,
             },
             include: {
-                shipmentDetail: true,
+                shipmentDetail: {
+                    include: {
+                        user: true,
+                        address: true,
+                    },
+                },
                 shipmentHistory: true,
                 payment: true,
             }
@@ -101,7 +106,12 @@ export class ShipmentCourierService {
                 trackingNumber,
             },
             include: {
-                shipmentDetail: true,
+                shipmentDetail: {
+                    include: {
+                        user: true,
+                        address: true,
+                    },
+                },
                 shipmentHistory: true,
                 payment: true,
             }
@@ -166,7 +176,12 @@ export class ShipmentCourierService {
                 trackingNumber,
             },
             include: {
-                shipmentDetail: true,
+                shipmentDetail: {
+                    include: {
+                        user: true,
+                        address: true,
+                    },
+                },
                 shipmentHistory: true,
                 payment: true,
             }
@@ -224,7 +239,12 @@ export class ShipmentCourierService {
                 trackingNumber,
             },
             include: {
-                shipmentDetail: true,
+                shipmentDetail: {
+                    include: {
+                        user: true,
+                        address: true,
+                    },
+                },
                 shipmentHistory: true,
                 payment: true,
             }
@@ -282,7 +302,12 @@ export class ShipmentCourierService {
                 trackingNumber,
             },
             include: {
-                shipmentDetail: true,
+                shipmentDetail: {
+                    include: {
+                        user: true,
+                        address: true,
+                    },
+                },
                 shipmentHistory: true,
                 payment: true,
             }
@@ -345,7 +370,12 @@ export class ShipmentCourierService {
                 trackingNumber,
             },
             include: {
-                shipmentDetail: true,
+                shipmentDetail: {
+                    include: {
+                        user: true,
+                        address: true,
+                    },
+                },
                 shipmentHistory: true,
                 payment: true,
             }

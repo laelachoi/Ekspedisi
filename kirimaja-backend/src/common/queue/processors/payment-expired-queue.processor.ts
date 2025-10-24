@@ -30,19 +30,23 @@ export class PaymentExpiryQueueProcessor {
                 where: { id: data.paymentId },
                 include: {
                     shipment: {
+
                         include: {
                             shipmentDetail: {
                                 include: {
-                                    user: {
-                                        select: {
-                                            email: true,
-                                            name: true,
-                                        },
-                                    },
+                                    user: true,
+                                    address: true,
                                 },
                             },
-                        },
-                    },
+                            shipmentHistory: {
+                                include: {
+                                    user: true,
+                                    branch: true,
+                                }
+                            },
+                            payment: true
+                        }
+                    }
                 },
             });
 

@@ -182,8 +182,11 @@ export class ShipmentsService {
                         shipmentDetail: {
                             include: {
                                 user: true,
+                                address: true,
                             },
                         },
+                        payment: true,
+                        shipmentHistory: true,
                     },
                 },
             },
@@ -289,7 +292,12 @@ export class ShipmentsService {
             },
           },
           include: {
-            shipmentDetail: true,
+            shipmentDetail: {
+                include: {
+                    user: true,
+                    address: true,
+                },
+            },
             payment: true,
             shipmentHistory: true,
           },
