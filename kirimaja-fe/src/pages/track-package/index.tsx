@@ -7,9 +7,7 @@ import {
 	Box,
 	TruckFast,
 	Timer,
-	TruckTime,
 	Location,
-	BoxTick,
 	CloseCircle,
 	CallIncoming,
 	CallOutgoing,
@@ -21,17 +19,20 @@ import {
 import { useState } from "react";
 import { toast, Toaster } from "react-hot-toast";
 import type { Shipment } from "@/lib/api/types/shipment";
-import { mockShipmentService } from "@/data/shipment";
 import { useMeta, META_DATA } from "@/hooks/use-meta";
+import { useTrackShipment } from "@/hooks/use-shipment";
+import { getStatusBadgeVariant, getStatusIcon, getStatusLabel } from "@/lib/utils/status-utils";
 
 const Index = () => {
 	// Use custom meta hook
 	useMeta(META_DATA["track-package"]);
 
-	const [trackingNumber, setTrackingNumber] = useState("KA240601001");
+	const [trackingNumber, setTrackingNumber] = useState("");
 	const [shipment, setShipment] = useState<Shipment | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 	const [hasSearched, setHasSearched] = useState(false);
+
+	const trackShipmentMutation = useTrackShipment();
 
 	const handleTrack = async () => {
 		if (!trackingNumber.trim()) {
@@ -42,7 +43,7 @@ const Index = () => {
 		try {
 			setIsLoading(true);
 			setHasSearched(true);
-			const shipmentData = await mockShipmentService.getByTrackingNumber(
+			const shipmentData = await trackShipmentMutation.mutateAsync(
 				trackingNumber.trim()
 			);
 			if (shipmentData) {
@@ -62,91 +63,6 @@ const Index = () => {
 			setShipment(null);
 		} finally {
 			setIsLoading(false);
-		}
-	};
-
-	const getStatusIcon = (status: string) => {
-		switch (status.toLowerCase()) {
-			case "pending":
-			case "ready_to_pickup":
-			case "waiting_pickup":
-				return <Timer size={20} variant="Bold" />;
-			case "picked_up":
-			case "in_transit":
-			case "on_the_way":
-			case "on_the_way_to_address":
-			case "departed_from_branch":
-				return <TruckTime size={20} variant="Bold" />;
-			case "arrived_at_branch":
-			case "at_branch":
-				return <Location size={20} variant="Bold" />;
-			case "delivered":
-			case "completed":
-				return <BoxTick size={20} variant="Bold" />;
-			case "failed":
-				return <CloseCircle size={20} variant="Bold" />;
-			default:
-				return <Timer size={20} variant="Bold" />;
-		}
-	};
-
-	const getStatusLabel = (status: string) => {
-		switch (status.toLowerCase()) {
-			case "pending":
-				return "Menunggu Konfirmasi";
-			case "ready_to_pickup":
-				return "Siap Dijemput";
-			case "waiting_pickup":
-				return "Menunggu Dijemput";
-			case "picked_up":
-				return "Sudah Dijemput";
-			case "in_transit":
-				return "Dalam Perjalanan";
-			case "arrived_at_branch":
-				return "Tiba di Cabang";
-			case "at_branch":
-				return "Di Cabang";
-			case "departed_from_branch":
-				return "Berangkat dari Cabang";
-			case "on_the_way":
-				return "Menuju Cabang Tujuan";
-			case "on_the_way_to_address":
-				return "Menuju Alamat Tujuan";
-			case "ready_to_deliver":
-				return "Siap Dikirim";
-			case "delivered":
-				return "Terkirim";
-			case "completed":
-				return "Selesai";
-			case "failed":
-				return "Gagal";
-			default:
-				return status;
-		}
-	};
-
-	const getStatusBadgeVariant = (status: string) => {
-		switch (status.toLowerCase()) {
-			case "pending":
-			case "ready_to_pickup":
-			case "waiting_pickup":
-				return "secondary";
-			case "picked_up":
-			case "in_transit":
-			case "on_the_way":
-			case "on_the_way_to_address":
-			case "departed_from_branch":
-				return "default";
-			case "arrived_at_branch":
-			case "at_branch":
-				return "outline";
-			case "delivered":
-			case "completed":
-				return "darkGreen";
-			case "failed":
-				return "destructive";
-			default:
-				return "secondary";
 		}
 	};
 
@@ -192,7 +108,7 @@ const Index = () => {
 								</Button>
 
 								<p className="text-sm text-secondary mt-3 text-center">
-									Nomor resi contoh: TRK9876543210
+									Nomor resi contoh: KA9876543210
 								</p>
 							</CardContent>
 						</Card>
@@ -217,11 +133,11 @@ const Index = () => {
 															variant="Bold"
 														/>
 													</div>
-													<div>
+													<div className="flex-1 min-w-0">
 														<h3 className="text-sm text-secondary">
 															No. Resi
 														</h3>
-														<p className="font-semibold">
+														<p className="font-semibold break-all">
 															{shipment.tracking_number ||
 																"Tidak tersedia"}
 														</p>
@@ -253,10 +169,20 @@ const Index = () => {
 										{/* Status Badge */}
 										<div className="text-center">
 											<Badge
-												variant={getStatusBadgeVariant(
-													shipment.delivery_status ||
-														"pending"
-												)}
+												variant={
+													getStatusBadgeVariant(
+														shipment.delivery_status ||
+															"pending"
+													) as
+														| "default"
+														| "secondary"
+														| "warning"
+														| "darkGreen"
+														| "destructive"
+														| "outline"
+														| null
+														| undefined
+												}
 												className="text-lg px-4 py-2"
 											>
 												{getStatusLabel(

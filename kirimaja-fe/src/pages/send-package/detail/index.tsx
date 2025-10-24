@@ -4,11 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Page, type PageBreadcrumbItem } from "@/components/ui/page";
 import {
 	Box,
-	BoxTick,
 	CallIncoming,
 	CallOutgoing,
 	CardPos,
-	CloseCircle,
 	Gps,
 	I3DCubeScan,
 	Location,
@@ -17,59 +15,47 @@ import {
 	TruckTime,
 	User,
 } from "iconsax-reactjs";
-import { Slash, Truck } from "lucide-react";
+import { Slash } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { toast } from "react-hot-toast";
-import type { Shipment } from "@/lib/api/types/shipment";
 import { useMeta, META_DATA } from "@/hooks/use-meta";
-import { mockShipmentService } from "@/data/shipment";
+import { useDownloadPdf, useShipment } from "@/hooks/use-shipment";
+import { getStatusBadgeVariant, getStatusIcon, getStatusLabel } from "@/lib/utils/status-utils";
 
 const DetailPage = () => {
 	// Use custom meta hook
 	useMeta(META_DATA["send-package-detail"]);
-	const [shipment, setShipment] = useState<Shipment | null>(null);
-	const [loading, setLoading] = useState(true);
 	const [downloadingPdf, setDownloadingPdf] = useState(false);
 	const { id } = useParams();
+	const shipmentId = id ? parseInt(id) : 0;
 	const navigate = useNavigate();
+	const downloadPdfMutation = useDownloadPdf();
+
+	const { data: shipment, isLoading: loading, error } = useShipment(shipmentId);
 
 	useEffect(() => {
-		const loadShipment = async () => {
-			if (!id) {
-				toast.error("ID pengiriman tidak valid");
-				navigate("/send-package");
-				return;
-			}
+		if (!shipmentId) {
+			toast.error("ID pengiriman tidak valid");
+			navigate("/send-package");
+			return;
+		}
+	}, [shipmentId, navigate]);
 
-			try {
-				setLoading(true);
-				const shipmentData = await mockShipmentService.getById(
-					parseInt(id)
-				);
-				setShipment(shipmentData);
-			} catch (error) {
-				console.error("Failed to load shipment:", error);
-				toast.error("Gagal memuat data pengiriman");
-				navigate("/send-package");
-			} finally {
-				setLoading(false);
-			}
-		};
-
-		loadShipment();
-	}, [id, navigate]);
+	if (error) {
+		toast.error("Gagal memuat data pengiriman");
+		navigate("/send-package");
+		return null;
+	}
 
 	const downloadPdf = async () => {
 		if (!id) return;
 
 		try {
 			setDownloadingPdf(true);
-			// Mock PDF download - in real app would download actual PDF
-			toast.success("PDF akan diunduh (fitur demo)");
+			toast.success("PDF akan diunduh");
 
-			// Simulate download delay
-			await new Promise((resolve) => setTimeout(resolve, 1000));
+			await downloadPdfMutation.mutateAsync(parseInt(id));
 
 			toast.success("PDF berhasil diunduh");
 		} catch (error) {
@@ -117,94 +103,6 @@ const DetailPage = () => {
 			hour: "2-digit",
 			minute: "2-digit",
 		});
-	};
-
-	const getStatusBadgeVariant = (status: string) => {
-		switch (status.toLowerCase()) {
-			case "pending":
-			case "ready_to_pickup":
-			case "waiting_pickup":
-				return "secondary"; // abu-abu
-			case "picked_up":
-			case "in_transit":
-			case "arrived_at_branch":
-			case "at_branch":
-			case "departed_from_branch":
-			case "on_the_way":
-			case "on_the_way_to_address":
-			case "ready_to_deliver":
-				return "default"; // kuning atau biru muda
-			case "delivered":
-			case "completed":
-				return "darkGreen"; // hijau
-			case "failed":
-				return "destructive"; // merah
-			default:
-				return "secondary";
-		}
-	};
-
-	const getStatusIcon = (status: string) => {
-		switch (status.toLowerCase()) {
-			case "pending":
-			case "ready_to_pickup":
-			case "waiting_pickup":
-				return <Timer size={20} variant="Bold" />;
-			case "picked_up":
-				return <BoxTick size={20} variant="Bold" />;
-			case "in_transit":
-			case "on_the_way":
-			case "on_the_way_to_address":
-			case "departed_from_branch":
-				return <TruckTime size={20} variant="Bold" />;
-			case "arrived_at_branch":
-			case "at_branch":
-				return <Location size={20} variant="Bold" />;
-			case "ready_to_deliver":
-				return <Truck size={20} />;
-			case "delivered":
-			case "completed":
-				return <Box size={20} variant="Bold" />;
-			case "failed":
-				return <CloseCircle size={20} variant="Bold" />;
-			default:
-				return <Timer size={20} variant="Bold" />;
-		}
-	};
-
-	const getStatusLabel = (status: string) => {
-		switch (status.toLowerCase()) {
-			case "pending":
-				return "Menunggu Konfirmasi";
-			case "ready_to_pickup":
-				return "Siap Di Pickup";
-			case "waiting_pickup":
-				return "Menunggu Dijemput";
-			case "picked_up":
-				return "Sudah Dijemput";
-			case "in_transit":
-				return "Dalam Perjalanan";
-			case "arrived_at_branch":
-				return "Tiba di Cabang";
-			case "at_branch":
-				return "Di Cabang";
-			case "departed_from_branch":
-				return "Berangkat dari Cabang";
-			case "on_the_way":
-				return "Menuju Cabang Tujuan";
-			case "on_the_way_to_address":
-				return "Menuju Alamat Tujuan";
-			case "ready_to_deliver":
-				return "Siap Dikirim";
-			case "delivered":
-				return "Terkirim";
-			case "completed":
-				return "Selesai";
-			case "failed":
-				return "Gagal";
-			default:
-				return status;
-		}
 	};
 
 	const breadcrumbs: PageBreadcrumbItem[] = [
@@ -449,10 +347,20 @@ const DetailPage = () => {
 												<h3 className="text-sm text-secondary">
 													Status Pengiriman
 												</h3>
-												<Badge
-													variant={getStatusBadgeVariant(
-														shipment.delivery_status
-													)}
+												<Badge 
+													variant={
+														getStatusBadgeVariant(
+															shipment.delivery_status
+														) as
+															| "default"
+															| "secondary"
+															| "warning"
+															| "darkGreen"
+															| "destructive"
+															| "outline"
+															| null
+															| undefined
+													}
 													className="mt-1"
 												>
 													{getStatusLabel(

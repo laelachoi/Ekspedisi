@@ -39,4 +39,28 @@ export const shipmentService = {
             throw new Error(errorMessage);
         }
     },
+
+    async downloadPdf(id: number): Promise<Blob> {
+        try {
+            const response = await apiClient.get(`/shipments/${id}/pdf`, {
+                responseType: 'blob',
+            });
+            return response.data as Blob;
+        } catch (error) {
+            const errorMessage = handleAxiosError(error as AxiosErrorType);
+            throw new Error(errorMessage);
+        }
+    },
+
+    async trackByNumber(trackingNumber: string): Promise<Shipment> {
+        try {
+            const response = await apiClient.get<ShipmentDetailResponse>(
+                `/shipments/tracking/${trackingNumber}`
+            );
+            return response.data.data;
+        } catch (error) {
+            const errorMessage = handleAxiosError(error as AxiosErrorType);
+            throw new Error(errorMessage);
+        }
+    },
 };

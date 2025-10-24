@@ -47,4 +47,36 @@ export const useCreateShipment = () => {
     });
 }
 
+// Download shipment PDF
+export const useDownloadPdf = () => {
+    return useMutation({
+        mutationFn: (id: number) => shipmentService.downloadPdf(id),
+        onSuccess: (blob) => {
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `shipment-${Date.now()}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+
+            toast.success("PDF berhasil diunduh");
+        },
+        onError: (error: Error) => {
+            toast.error(error.message);
+        },
+    });
+};
+
+export const useTrackShipment = () => {
+    return useMutation({
+        mutationFn: (trackingNumber: string) => 
+            shipmentService.trackByNumber(trackingNumber),
+        onError: (error: Error) => {
+            toast.error(error.message);
+        },
+    });
+};
+
     
