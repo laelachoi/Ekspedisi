@@ -313,7 +313,12 @@ export class ShipmentsService {
             id: id,
           },
           include: {
-            shipmentDetail: true,
+            shipmentDetail: {
+                include: {
+                    user: true,
+                    address: true,
+                },
+            },
             payment: true,
             shipmentHistory: true,
           },
