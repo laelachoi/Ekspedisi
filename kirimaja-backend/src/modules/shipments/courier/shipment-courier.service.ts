@@ -25,6 +25,16 @@ export class ShipmentCourierService {
                     ],
                 },
             },
+            include: {
+                shipmentDetail: {
+                    include: {
+                        user: true,
+                        address: true,
+                    },
+                },
+                payment: true,
+                shipmentHistory: true,
+            },
             orderBy: {
                 createdAt: 'desc',
             },

@@ -9,13 +9,10 @@ import {
 import {
 	Box,
 	I3DCubeScan,
-	Timer,
-	BoxTick,
 	TruckTime,
-	CloseCircle,
 } from "iconsax-reactjs";
-import { Truck } from "lucide-react";
 import type { Shipment } from "@/lib/api/types/shipment";
+import { getStatusBadgeVariant, getStatusIcon, getStatusLabel } from "@/lib/utils/status-utils";
 
 interface DetailProps {
 	shipment: Shipment | null;
@@ -41,73 +38,9 @@ const Detail = ({ shipment, isOpen, onClose }: DetailProps) => {
 		}).format(price);
 	};
 
-	const getStatusBadgeVariant = (status: string) => {
-		switch (status.toLowerCase()) {
-			case "pending":
-			case "waiting_pickup":
-				return "secondary";
-			case "picked_up":
-			case "in_transit":
-			case "on_the_way_to_address":
-			case "ready_to_deliver":
-				return "default";
-			case "delivered":
-				return "default";
-			case "failed":
-				return "destructive";
-			default:
-				return "secondary";
-		}
-	};
-
-	const getStatusIcon = (status: string) => {
-		switch (status.toLowerCase()) {
-			case "pending":
-			case "waiting_pickup":
-				return <Timer size={16} variant="Bold" />;
-			case "picked_up":
-				return <BoxTick size={16} variant="Bold" />;
-			case "in_transit":
-			case "on_the_way":
-			case "on_the_way_to_address":
-				return <TruckTime size={16} variant="Bold" />;
-			case "ready_to_deliver":
-				return <Truck size={16} />;
-			case "delivered":
-				return <Box size={16} variant="Bold" />;
-			case "failed":
-				return <CloseCircle size={16} variant="Bold" />;
-			default:
-				return <Timer size={16} variant="Bold" />;
-		}
-	};
-
-	const getStatusLabel = (status: string) => {
-		switch (status.toLowerCase()) {
-			case "pending":
-				return "Menunggu Konfirmasi";
-			case "waiting_pickup":
-				return "Menunggu Pickup";
-			case "picked_up":
-				return "Sudah Dipickup";
-			case "in_transit":
-				return "Dalam Perjalanan";
-			case "on_the_way_to_address":
-				return "Menuju Alamat";
-			case "ready_to_deliver":
-				return "Siap Dikirim";
-			case "delivered":
-				return "Terkirim";
-			case "failed":
-				return "Gagal";
-			default:
-				return status;
-		}
-	};
-
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent className="max-w-md">
+			<DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
 				<DialogHeader>
 					<DialogTitle className="text-xl font-semibold">
 						Detail Paket
@@ -200,10 +133,17 @@ const Detail = ({ shipment, isOpen, onClose }: DetailProps) => {
 										Status
 									</p>
 									<Badge
-										variant={getStatusBadgeVariant(
-											shipment.delivery_status ||
+										variant={
+											getStatusBadgeVariant(
+												shipment.delivery_status ||
 												"pending"
-										)}
+											) as 
+												| "default"
+												| "destructive"
+												| "outline"
+												| "secondary"
+												| "darkGreen"
+										}
 										className="mt-1"
 									>
 										{getStatusLabel(

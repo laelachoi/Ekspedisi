@@ -5,10 +5,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDeliverToBranch, useDeliverToCustomer, usePickFromBranch, usePickShipment, usePickupFromBranch, usePickupShipment } from "@/hooks/use-delivery";
-import type { Shipment } from "@/lib/api";
+import { ShipmentStatus, type Shipment } from "@/lib/api/types/shipment";
 import { Camera, Eye } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import Detail from "../detail";
 
 interface ActionButtonsProps {
 	shipment: Shipment;
@@ -94,9 +95,57 @@ function ActionButtons({ shipment, onActionComplete }: ActionButtonsProps) {
 		setIsPhotoDialogOpen(true);
 	};
 
+	const handlePickShipment = async () => {
+		if (!shipment.tracking_number) return;
+		try {
+			await pickShipment.mutateAsync(shipment.tracking_number);
+			onActionComplete();
+		} catch {
+			// Error handled by hook
+		}
+	}
+
+	const handleDeliverToBranch = async () => {
+		if (!shipment.tracking_number) return;
+		try {
+			await deliverToBranch.mutateAsync(shipment.tracking_number);
+			onActionComplete();
+		} catch {
+			// Error handled by hook
+		}
+	}
+
+	const handlePickFromBranch = async () => {
+		if (!shipment.tracking_number) return;
+		try {
+			await pickFromBranch.mutateAsync(shipment.tracking_number);
+			onActionComplete();
+		} catch {
+			// Error handled by hook
+		}
+	}
+
+	const handlePickupFromBranch = async () => {
+		if (!shipment.tracking_number) return;
+		try {
+			await pickupFromBranch.mutateAsync(shipment.tracking_number);
+			onActionComplete();
+		} catch {
+			// Error handled by hook
+		}
+	}
+
 	// Determine which buttons to show based on delivery status
 	const renderActionButtons = () => {
 		if (!shipment.tracking_number) return null;
+
+		const isLoading =
+			pickShipment.isPending ||
+			pickupShipment.isPending ||
+			deliverToBranch.isPending ||
+			pickFromBranch.isPending ||
+			pickupFromBranch.isPending ||
+			deliverToCustomer.isPending;
 
 		switch (shipment.delivery_status) {
 			case ShipmentStatus.READY_TO_PICKUP:
@@ -105,6 +154,7 @@ function ActionButtons({ shipment, onActionComplete }: ActionButtonsProps) {
 						<Button
 							variant="darkGreen"
 							size="sm"
+							onClick={handlePickShipment}
 							disabled={isLoading}
 						>
 							Pick
@@ -128,21 +178,35 @@ function ActionButtons({ shipment, onActionComplete }: ActionButtonsProps) {
 
 			case ShipmentStatus.PICKED_UP:
 				return (
-					<Button variant="oranye" size="sm" disabled={isLoading}>
+					<Button 
+						variant="oranye" 
+						size="sm" 
+						onClick={handleDeliverToBranch}
+						disabled={isLoading}
+					>
 						Kirim ke Cabang
 					</Button>
 				);
 
 			case ShipmentStatus.READY_TO_PICKUP_AT_BRANCH:
 				return (
-					<Button variant="secondary" size="sm" disabled={isLoading}>
+					<Button 
+						variant="secondary" 
+						size="sm" 
+						onClick={handlePickFromBranch}
+						disabled={isLoading}
+					>
 						Ambil dari Cabang
 					</Button>
 				);
 
 			case ShipmentStatus.READY_TO_DELIVER:
 				return (
-					<Button variant="default" size="sm" disabled={isLoading}>
+					<Button 
+						variant="default" 
+						size="sm" 
+						onClick={handlePickupFromBranch}
+						disabled={isLoading}>
 						Siap Kirim
 					</Button>
 				);
@@ -158,16 +222,6 @@ function ActionButtons({ shipment, onActionComplete }: ActionButtonsProps) {
 						<Camera className="w-4 h-4 mr-1" />
 						Konfirmasi Terkirim
 					</Button>
-				);
-
-			case ShipmentStatus.DELIVERED:
-				return (
-					<Badge
-						variant="default"
-						className="bg-green-100 text-green-800"
-					>
-						Selesai
-					</Badge>
 				);
 
 			default:
