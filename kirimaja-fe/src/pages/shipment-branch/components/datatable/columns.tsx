@@ -91,11 +91,15 @@ export const columns: ColumnDef<ShipmentBranchLog>[] = [
 		},
 	},
 	{
-		accessorKey: "user_id",
-		header: "User ID",
+		accessorKey: "scanned_by_user",
+		header: "Admin",
 		cell: ({ row }) => {
-			const userId = row.getValue("user_id") as number;
-			return <div className="text-sm font-medium">User {userId}</div>;
+			const user = row.original.scanned_by_user;
+			return (
+				<div className="text-sm font-medium">
+					{user ? user.name : "Uknown User"}
+				</div>
+			)
 		},
 	},
 ];

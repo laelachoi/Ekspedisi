@@ -31,8 +31,9 @@ import {
 	Camera,
 } from "iconsax-reactjs";
 import { ImprovedScanner } from "./improved-scanner";
-import { scanFormSchema, type ScanFormData } from "@/lib/validations/shipment";
 import type { ShipmentBranchLog } from "@/lib/api/types/shipment-branch";
+import { scanShipmentSchema, type ScanShipmentFormData } from "@/lib/validations/shipment-branch";
+import { useScanShipment } from "@/hooks/use-shipment-branch";
 
 interface BetterScanModalProps {
 	isOpen: boolean;
@@ -51,10 +52,13 @@ export function BetterScanModal({
 	const [activeTab, setActiveTab] = useState("manual");
 	const [isScannerActive, setIsScannerActive] = useState(false);
 
-	const form = useForm<ScanFormData>({
-		resolver: zodResolver(scanFormSchema),
+	const scanMutation = useScanShipment();
+
+	const form = useForm({
+		resolver: zodResolver(scanShipmentSchema),
 		defaultValues: {
-			trackingNumber: "",
+			tracking_number: "",
+			type,
 			is_ready_to_pickup: false,
 		},
 	});
@@ -93,7 +97,7 @@ export function BetterScanModal({
 				trackingNumber = decodedText.trim();
 			}
 
-			form.setValue("trackingNumber", trackingNumber);
+			form.setValue("tracking_number", trackingNumber);
 
 			// Stop scanner and switch to manual tab
 			setIsScannerActive(false);
@@ -102,25 +106,26 @@ export function BetterScanModal({
 		}
 	};
 
-	const handleQrError = (error: string) => {
+	const handleQrError = () => {
 		// Handle scanner errors silently or show user-friendly message
-		console.warn("QR Scanner error:", error);
-		toast.error("Gagal memindai QR code");
 	};
 
-	async function onSubmit(values: ScanFormData) {
+	async function onSubmit(values: ScanShipmentFormData) {
 		try {
 			setIsLoading(true);
 			// Simulate API call delay
 			await new Promise((resolve) => setTimeout(resolve, 1000));
 
 			const newLogData = {
-				tracking_number: values.trackingNumber,
-				type,
+				tracking_number: values.tracking_number,
+				type: values.type,
 				description: `Paket ${
 					type === "IN" ? "masuk" : "keluar"
 				} dari cabang melalui scan`,
+				is_ready_to_pickup: values.is_ready_to_pickup,
 			};
+
+			await scanMutation.mutateAsync(newLogData);
 
 			// Simulate scan process
 
@@ -239,7 +244,7 @@ export function BetterScanModal({
 							>
 								<FormField
 									control={form.control}
-									name="trackingNumber"
+									name="tracking_number"
 									render={({ field }) => (
 										<FormItem>
 											<FormLabel>Nomor Resi</FormLabel>
