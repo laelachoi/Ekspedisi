@@ -6,29 +6,7 @@ import { type ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
 import type { Shipment } from "@/lib/api/types/shipment";
 import { HistoryActionCell } from "./history-action-cell";
-
-const getVariantFromStatus = (status: string) => {
-	switch (status.toLowerCase()) {
-		case "picked_up":
-		case "in_transit":
-		case "on_the_way":
-		case "departed_from_branch":
-			return "default";
-		case "waiting_pickup":
-		case "pending":
-			return "secondary";
-		case "arrived_at_branch":
-		case "at_branch":
-			return "outline";
-		case "delivered":
-		case "completed":
-			return "darkGreen";
-		case "failed":
-			return "destructive";
-		default:
-			return "default";
-	}
-};
+import { getStatusBadgeVariant, getStatusLabel } from "@/lib/utils/status-utils";
 
 export const columns: ColumnDef<Shipment>[] = [
 	{
@@ -108,11 +86,17 @@ export const columns: ColumnDef<Shipment>[] = [
 			const shipment = row.original;
 			const status = shipment.delivery_status || "pending";
 			return (
-				<Badge variant={getVariantFromStatus(status)}>
-					{status
-						.replace(/_/g, " ")
-						.toLowerCase()
-						.replace(/\b\w/g, (l) => l.toUpperCase())}
+				<Badge 
+					variant={
+						getStatusBadgeVariant(status) as
+							| "default"
+							| "destructive"
+							| "outline"
+							| "secondary"
+							| "darkGreen"
+					}
+				>
+						{getStatusLabel(status)}
 				</Badge>
 			);
 		},
