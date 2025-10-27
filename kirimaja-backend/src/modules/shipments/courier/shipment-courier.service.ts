@@ -32,8 +32,6 @@ export class ShipmentCourierService {
                         address: true,
                     },
                 },
-                payment: true,
-                shipmentHistory: true,
             },
             orderBy: {
                 createdAt: 'desc',
@@ -56,8 +54,6 @@ export class ShipmentCourierService {
                         address: true,
                     },
                 },
-                shipmentHistory: true,
-                payment: true,
             }
         });
 
@@ -122,8 +118,6 @@ export class ShipmentCourierService {
                         address: true,
                     },
                 },
-                shipmentHistory: true,
-                payment: true,
             }
         });
 
@@ -192,8 +186,6 @@ export class ShipmentCourierService {
                         address: true,
                     },
                 },
-                shipmentHistory: true,
-                payment: true,
             }
         });
 
@@ -255,8 +247,6 @@ export class ShipmentCourierService {
                         address: true,
                     },
                 },
-                shipmentHistory: true,
-                payment: true,
             }
         });
 
@@ -318,8 +308,6 @@ export class ShipmentCourierService {
                         address: true,
                     },
                 },
-                shipmentHistory: true,
-                payment: true,
             }
         });
 
@@ -386,8 +374,6 @@ export class ShipmentCourierService {
                         address: true,
                     },
                 },
-                shipmentHistory: true,
-                payment: true,
             }
         });
 
