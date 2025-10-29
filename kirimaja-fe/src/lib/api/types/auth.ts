@@ -1,5 +1,5 @@
 // Authentication related types
-import type { Permission } from "./role";
+import type { Permission, Role } from "./role";
 
 export interface User {
 	id: number;
@@ -7,6 +7,7 @@ export interface User {
 	email: string;
 	phone_number: string;
 	avatar?: string | null;
+	role: Role;
 	created_at: string;
 	updated_at: string;
 }
